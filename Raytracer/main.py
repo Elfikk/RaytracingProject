@@ -7,9 +7,9 @@ Created on Mon May 31 11:52:55 2021
 """
 import numpy as np
 import matplotlib.pyplot as plt
-import RayClass as Ray
+from RayClass import Ray
 import SceneClass as Scene
-import ObjectClasses as Object
+from ObjectClasses import Sphere, Plane
 
 objects = [Plane([100,0,5],[150,200,0],[0.2,0.1,0.22]),Sphere([-200,-20,200],100,[0.1,0.5,0.2])]
  
