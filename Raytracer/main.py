@@ -8,7 +8,7 @@ Created on Mon May 31 11:52:55 2021
 import numpy as np
 import matplotlib.pyplot as plt
 from RayClass import Ray
-import SceneClass as Scene
+from SceneClass import Scene
 from ObjectClasses import Sphere, Plane
 
 objects = [Plane([100,0,5],[150,200,0],[0.2,0.1,0.22]),Sphere([-200,-20,200],100,[0.1,0.5,0.2])]
@@ -33,4 +33,3 @@ for i in range(300):
         colour = nearest_intersect_objects(ray,objects)
         image[i,j] = colour
 plt.imshow(image)
-    

@@ -1,10 +1,12 @@
+import numpy as np
+
 class Ray():
 #Class defining our funky rays.
 
     def __init__(self, pos_vector, dir_vector, wavelength = None, \
          intensity = 1):
         self.__position_vector = pos_vector
-        self.__direction_vector = dir_vector
+        self.__direction_vector = dir_vector/np.linalg.norm(dir_vector)
         self.__wavelength = wavelength
         self.__intensity = intensity
 
