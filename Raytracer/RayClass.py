@@ -21,11 +21,16 @@ class Ray():
 
     def get_intensity(self):
         return self.__intensity
-
-if __name__ == '__main__':
-    ray = Ray([1,2,3], [3,2,1])
-    print(ray.get_wavelength(), ray.get_position_vector(), \
-        ray.get_direction_vector())
-    ray2 = Ray((0,1,2), (1,1,1), 568)
-    print(ray2.get_wavelength(), ray2.get_position_vector(), \
-     ray2.get_direction_vector())
+    
+    def reflected_ray(self, object, distance):
+        dir = self.get_direction_vector()
+        reflected_pos = self.get_position_vector() + distance * self.get_direction_vector()
+        if object.get_type() == 'plane':
+            normal = object.get_normal()
+            reflected_dir = dir - 2 * normal * np.dot(dir, normal)
+        if object.get_type() == 'sphere':
+            normal = reflected_pos - object.get_position()
+            normal = normal/np.linalg.norm(normal)
+            reflected_dir = dir - 2 * normal * np.dot(dir, normal)
+        reflected_ray = Ray(reflected_pos, reflected_dir)
+        return reflected_ray

@@ -6,8 +6,8 @@ from numpy import inf
    
 class Sphere():
 
-    def __init__(self, position, radius, colour,type = 'sphere',reflectivity = 1, \
-         transmitivity = 0):
+    def __init__(self, position, radius, colour, reflectivity, \
+                 type = 'sphere', transmitivity = 0):
         #__position is the centre of the sphere. Position should be a
         #numpy 3x1 array, radius any floating point number (no complex
         #radii cmon).
@@ -56,16 +56,18 @@ class Sphere():
 
 class Plane():
 
-    def __init__(self, normal, plane_position, colour, type = 'plane',limits = [-np.inf, np.inf, -np.inf,\
-        np.inf, -np.inf, np.inf]):
+    def __init__(self, normal, plane_position, colour, reflectivity, \
+                 type = 'plane', limits = [-np.inf, np.inf, -np.inf, \
+                                           np.inf, -np.inf, np.inf]):
         #r.n = d form.
         #Normal is 3x1 array, d a float. Limits formatting:
         #[x_min, x_max, y_min, y_max, z_min, z_max].
-        self.__normal = normal
+        self.__normal = normal/np.linalg.norm(normal)
         self.__plane_position = plane_position
         self.__limits = limits
         self.__colour = colour
-        self.__type = type 
+        self.__type = type
+        self.__reflectivity = reflectivity
 
     def get_normal(self):
         return self.__normal
@@ -81,6 +83,9 @@ class Plane():
 
     def get_type(self):
         return self.__type
+    
+    def get_reflectivity(self):
+        return self.__reflectivity
 
     def plane_intersect(self,Ray):
         ray_position = np.array(Ray.get_position_vector())
