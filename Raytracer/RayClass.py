@@ -27,10 +27,8 @@ class Ray():
         reflected_pos = self.get_position_vector() + distance * self.get_direction_vector()
         if object.get_type() == 'plane':
             normal = object.get_normal()
-            reflected_dir = dir - 2 * normal * np.dot(dir, normal)
         if object.get_type() == 'sphere':
-            normal = reflected_pos - object.get_position()
-            normal = normal/np.linalg.norm(normal)
-            reflected_dir = dir - 2 * normal * np.dot(dir, normal)
+            normal = object.get_normal(reflected_pos)
+        reflected_dir = dir - 2 * normal * np.dot(dir, normal)
         reflected_ray = Ray(reflected_pos, reflected_dir)
         return reflected_ray

@@ -35,6 +35,10 @@ class Sphere():
 
     def get_type(self):
         return self.__type
+    
+    def get_normal(self, intersection):
+        normal = intersection - self.get_position()
+        return normal/np.linalg.norm(normal)
 
     #calculating t for intersection of ray with sphere
     def sphere_intersect(self,Ray):

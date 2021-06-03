@@ -9,13 +9,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from RayClass import Ray
-from SceneClass import Scene
 from ObjectClasses import Sphere, Plane
 
 objects = [Plane([100,0,5], [150,200,0], [0.7,0.2,0.2], 0.2), \
            Sphere([-200,-20,200], 300, [0.2,0.7,0.2], 0.7), \
-           Sphere([-100,500,200], 250, [0.2,0.2,0.7], 0.5)]
- 
+           Sphere([-100,600,200], 250, [0.2,0.2,0.7], 0.5)]
+
 def nearest_intersect_objects(ray, objects):
     distances = []
     for object in objects:
