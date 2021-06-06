@@ -22,6 +22,11 @@ class Ray():
 
     def get_intensity(self):
         return self.__intensity
+
+    def get_position(self, t):
+        #Line equation: r = p + dt. Given a value of t, returns a
+        #position on the ray's trajectory.
+        return self.get_position_vector() + t * self.get_direction_vector()
     
     #I don't like having the secondary ray firing from here, but it'll stay
     #that way for now, until the Scene takes over the handling. Same case 

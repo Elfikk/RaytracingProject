@@ -1,7 +1,6 @@
 import numpy as np
 
 #Need definining: Reflectivity, Transmitivity
-#Probably could use inheritance here actually, from master Object.
    
 class SceneObject():
     #All scene objects inherit from this parent. 
@@ -85,7 +84,8 @@ class Plane(SceneObject):
         #r.n = r.a form, where a is some arbitrary position on the plane.
         #Normal and position are 3x1 arrays. Limits formatting:
         #[x_min, x_max, y_min, y_max, z_min, z_max].
-        SceneObject.__init__(self, colour, reflectivity, transmitivity)
+        SceneObject.__init__(self, colour, reflectivity, transmitivity, \
+            refractive_index)
 
         #Numpy is nice enough to automatically change types when calling 
         #in-built functions like this - was causing me trouble last time,
