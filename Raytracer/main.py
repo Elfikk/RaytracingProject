@@ -28,7 +28,7 @@ def nearest_intersect_objects(ray, objects):
 
 def colour(ray, objects, max_depth = 5):
     if nearest_intersect_objects(ray,objects) == np.inf:
-        return [0,0,0]
+        return [0.53, 0.80 , 0.98]
     else:
         object = nearest_intersect_objects(ray,objects)[0]
         distance = nearest_intersect_objects(ray,objects)[1]
@@ -84,7 +84,7 @@ for i in range(300):
     for j in range(400):
         direction_vector = np.array([i-150, j-200, 0]) - np.array([150,200,-500])
         ray = Ray([150,200,-500], direction_vector)
-        image[i,j] = refractive_rendering(ray, objects)
+        image[i,j] = colour(ray, objects)
         #tqdm._instances.clear()
 plt.imshow(image)
 plt.show()
