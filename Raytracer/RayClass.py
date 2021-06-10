@@ -1,5 +1,6 @@
 import numpy as np
 import RefractionMethods as rm
+#import networkx as nx
 
 class Ray():
 #Class defining our funky rays.
@@ -34,8 +35,7 @@ class Ray():
     #completely inconsistent. Easier to wrap your head around it :)
     def reflected_ray(self, object, distance):
         dir = self.get_direction_vector()
-        reflected_pos = self.get_position_vector() + distance * \
-            self.get_direction_vector()
+        reflected_pos = self.get_position(distance)
         normal = object.get_normal(reflected_pos)
         reflected_dir = dir - 2.0 * normal * np.dot(dir, normal)
         reflected_ray = Ray(reflected_pos, reflected_dir)
@@ -46,3 +46,11 @@ class Ray():
         direction = rm.refracted_direction(self.get_direction_vector(), \
             normal, object.get_refractive_index(), n1)
         return Ray(intersection, direction)
+
+# if __name__ == '__main__':
+
+#     #Ray can be used for identifying nodesssss, although not how 
+#     #implemented in the end.
+#     ray = Ray(np.array([1,1,1]), np.array([1,1,1]))
+#     graph = nx.Graph()
+#     graph.add_node(ray)

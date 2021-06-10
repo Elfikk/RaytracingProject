@@ -124,3 +124,6 @@ class Plane(SceneObject):
 if __name__ == '__main__':
     plane = Plane([100,0,5], [150,200,0], [0.7,0.2,0.2], 0.2)
     print(plane.get_reflectivity())
+
+    sphere = Sphere(np.array([1,1,1]), 3, (0.1,0.1,0))
+    print(sphere.get_normal(np.array([0,1,0])))
