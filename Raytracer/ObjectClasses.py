@@ -6,11 +6,14 @@ class SceneObject():
     #All scene objects inherit from this parent. 
 
     def __init__(self, colour, reflectivity = 1, transmitivity = 0, \
-        refractive_index = 1):
+        refractive_index = 1, ambient = 0.05, diffuse =1 ,specular = 1):
         self.__colour = colour
         self.__reflectivity = reflectivity
         self.__transmitivity = transmitivity
         self.__refractive_index = refractive_index
+        self.__ambient = ambient 
+        self.__diffuse = diffuse 
+        self.__specular = specular
 
     def get_colour(self):
         return self.__colour
@@ -21,23 +24,33 @@ class SceneObject():
     def get_transmitivity(self):
         return self.__transmitivity
 
+    def get_ambient(self):
+        return self.__ambient
+   
+    def get_diffuse(self):
+        return self.__diffuse
+
+    def get_specular(self):
+        return self.__specular
+
     def get_refractive_index(self):
         return self.__refractive_index
-
+    
     def intersect(self, ray):
         #This should never need to be called, but prevents crashes 
         #if you forget to define your intersection function.
         return np.inf
+    
 
 class Sphere(SceneObject):
 
     def __init__(self, position, radius, colour, reflectivity = 1, \
-         transmitivity = 0, refractive_index = 1):
+         transmitivity = 0, refractive_index = 1,ambient= 0.05, diffuse= 1, specular= 1):
         #__position is the centre of the sphere. Position should be a
         #numpy 3x1 array, radius any positive floating point number 
         #(no complex radii cmon).
         SceneObject.__init__(self, colour, reflectivity, transmitivity,\
-            refractive_index)
+            refractive_index,ambient,diffuse,specular)
         self.__position = position
         self.__radius = radius
         self.__type = 'sphere'
@@ -76,16 +89,17 @@ class Sphere(SceneObject):
                 return min(t1, t2)
         return np.inf
 
+
 class Plane(SceneObject):
 
     def __init__(self, normal, plane_position, colour, reflectivity = 1, \
-        transmitivity = 0, refractive_index = 1, limits = [-np.inf, np.inf, \
-         -np.inf, np.inf, -np.inf, np.inf]):
+        transmitivity = 0, refractive_index = 1, ambient=0.05,diffuse= 1,\
+        specular=1,limits = [-np.inf, np.inf, -np.inf, np.inf, -np.inf, np.inf]):
         #r.n = r.a form, where a is some arbitrary position on the plane.
         #Normal and position are 3x1 arrays. Limits formatting:
         #[x_min, x_max, y_min, y_max, z_min, z_max].
         SceneObject.__init__(self, colour, reflectivity, transmitivity, \
-            refractive_index)
+            refractive_index,ambient,diffuse,specular)
 
         #Numpy is nice enough to automatically change types when calling 
         #in-built functions like this - was causing me trouble last time,

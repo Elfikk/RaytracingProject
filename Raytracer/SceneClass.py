@@ -57,4 +57,19 @@ class Scene():
         #When finished with a set of rays, clear the list.
         self.__rays = []
 
+class Light():
+    """Light represents a point light source of a certain colour"""
+   
+    def __init__(self,position,direction,colour=[1,1,1]):
+        self.__position = position 
+        self.__direction = direction
+        self.__colour = colour 
     
+    def get_position(self):
+        return self.__position 
+    
+    def get_direction(self):
+        return self.__direction
+     
+    def get_colour(self):
+        return self.__colour 

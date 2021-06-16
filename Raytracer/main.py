@@ -4,17 +4,20 @@ import matplotlib.pyplot as plt
 #library that I don't have installed is a no-no. I leave it commented out,
 #for my own benefit. 
 from RayClass import Ray
-from SceneClass import Scene
+from SceneClass import Scene,Light
 from ObjectClasses import Sphere, Plane
 
-# objects = [Plane([100,0,5], [150,200,0], [0.7,0.2,0.2], 0.2), \
-#            Sphere([-200,-20,200], 300, [0.2,0.7,0.2], 0.7), \
-#            Sphere([-100,500,200], 250, [0.2,0.2,0.7], 0.5)]
-
 objects = [Plane([100,0,5], [150,200,0], [0.7,0.2,0.2], 0.2), \
-           Sphere([0, 0, 250], 100, [0.2,0.7,0.2], 0.7)]#, \
-        #    Plane([-1,0,1], [0,0,50], [0.,0.5,0.], transmitivity = 0.99,\
-        #    refractive_index = 2)]
+           Sphere([-200,50,150], 100, [0.2,0.7,0.2], 0.7), \
+           Sphere([-100,100,200], 50, [0.2,0.2,0.7], 0.5)]
+
+lights = [100,150,200]
+scene = Scene(objects,[150,200,5],[0,0,0],400,300,[150,200,5])
+
+#objects = [Plane([100,0,5], [150,200,0], [0.7,0.2,0.2], 0.2), \
+#           Sphere([0, 0, 250], 100, [0.2,0.7,0.2], 0.7), \
+#            Plane([-1,0,1], [0,0,50], [0.,0.5,0.], transmitivity = 0.99,\
+#            refractive_index = 2)]
  
 def nearest_intersect_objects(ray, objects):
     distances = []
@@ -56,6 +59,7 @@ def refractive_rendering(ray, objects, max_depth = 3):
         return [0.53, 0.80 , 0.98] #I'm getting tired of the void
     else:
         object = nearest_intersect_objects(ray,objects)[0]
+        print(object)
         distance = nearest_intersect_objects(ray,objects)[1]
         transmitivity = object.get_transmitivity()
         colour = (1-transmitivity) * np.array(object.get_colour())
@@ -77,6 +81,39 @@ def refractive_rendering(ray, objects, max_depth = 3):
                 ray = refracted_ray
         return colour
 
+def shadows(ray,lights,objects,scene):
+    if nearest_intersect_objects(ray,objects) == np.inf:
+        return [0, 0 ,0]
+    else:
+        object, min_distance = nearest_intersect_objects(ray,objects)
+        #interesection point 
+        hit_point = ray.get_position_vector() +  ray.get_direction_vector() * min_distance
+        normal = object.get_normal(hit_point) #obtaining normal to sphere
+        #obtaining position of new ray 
+        position = hit_point + (normal * 0.1) #avoid grainy atrifact 
+        direction = (lights - position)/np.linalg.norm(lights - position)
+        #trace a shadow ray in the light direction 
+        shadowRay = Ray(position,direction)
+        #Shadow: if a point is shadowed 
+        if nearest_intersect_objects(shadowRay, objects) == np.inf:
+            return object.get_colour()
+        light_distance = nearest_intersect_objects(shadowRay, objects)[1]
+        intersection_to_light = np.linalg.norm(lights - hit_point)
+        if light_distance < intersection_to_light:
+            return [0,0,0]
+        else:
+        #Lambert shading (diffuse)
+            lambert = np.max(np.dot(normal,-intersection_to_light),0)
+            i_diffuse = lambert * object.get_diffuse()
+            #Blinn-Phong shading (specular)
+            to_cam = scene.get_camera_position() - hit_point
+            half_vector = (lights + to_cam)/np.linalg.norm(lights + to_cam)
+            i_specular = np.max(np.dot(normal,half_vector)) * object.get_specular()
+            #Ambient 
+            i_ambient = object.get_ambient()
+            colour = np.array(object.get_colour()) * i_ambient *i_specular *i_diffuse
+            print(colour)
+            return colour
 
 image = np.zeros([300,400,3])
 for i in range(300):
@@ -84,7 +121,8 @@ for i in range(300):
     for j in range(400):
         direction_vector = np.array([i-150, j-200, 0]) - np.array([150,200,-500])
         ray = Ray([150,200,-500], direction_vector)
-        image[i,j] = refractive_rendering(ray, objects)
+        #image[i,j] = colour(ray, objects)
+        image[i,j] = shadows(ray,lights,objects,scene)
         #tqdm._instances.clear()
 plt.imshow(image)
 plt.show()
