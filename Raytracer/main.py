@@ -1,8 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-#from tqdm import tqdm #I appreciate the progress bar, but requiring a
-#library that I don't have installed is a no-no. I leave it commented out,
-#for my own benefit. 
+from tqdm import tqdm
 from RayClass import Ray
 from SceneClass import Scene
 from ObjectClasses import Sphere, Plane
@@ -79,12 +77,11 @@ def refractive_rendering(ray, objects, max_depth = 3):
 
 
 image = np.zeros([300,400,3])
-for i in range(300):
-    print(i)
+for i in tqdm(range(300)):
     for j in range(400):
         direction_vector = np.array([i-150, j-200, 0]) - np.array([150,200,-500])
         ray = Ray([150,200,-500], direction_vector)
         image[i,j] = colour(ray, objects)
-        #tqdm._instances.clear()
+        tqdm._instances.clear()
 plt.imshow(image)
 plt.show()

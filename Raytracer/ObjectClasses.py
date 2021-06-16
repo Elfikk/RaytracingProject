@@ -65,13 +65,12 @@ class Sphere(SceneObject):
         radius = self.get_radius()
         ray_position = np.array(ray.get_position_vector())
         ray_dir = np.array(ray.get_direction_vector())
-        a = np.dot(ray_dir,ray_dir)
         b = 2 * np.dot(ray_dir, ray_position - position)
         c = np.linalg.norm(ray_position - position) ** 2 - radius ** 2
-        delta = b ** 2 - 4 * c* a
+        delta = b ** 2 - 4 * c
         if delta > 0:
-            t1 = (-b + np.sqrt(delta)) / (2*a)
-            t2 = (-b - np.sqrt(delta)) / (2*a)
+            t1 = (-b + np.sqrt(delta)) / 2
+            t2 = (-b - np.sqrt(delta)) / 2
             if t1 > 0 and t2 > 0:
                 return min(t1, t2)
         return np.inf
@@ -121,6 +120,70 @@ class Plane(SceneObject):
             return np.inf
         return t
 
-if __name__ == '__main__':
-    plane = Plane([100,0,5], [150,200,0], [0.7,0.2,0.2], 0.2)
-    print(plane.get_reflectivity())
+class lens(SceneObject):
+
+    def __init__(self, position_lens, direction_lens, radius_lens, \
+                 thickness, focal_length, colour, reflectivity = 0, \
+         transmitivity = 1, refractive_index = 1.517):
+        # Position is the centre of the cicle at the base of the parabaloid.
+        # Position should be a numpy 3x1 array
+        SceneObject.__init__(self, colour, reflectivity, transmitivity,\
+            refractive_index)
+        self.__radius_lens = radius_lens
+        self.__thickness = thickness
+        self.__focal_length = focal_length
+        self.__position_lens = position_lens
+        self.__direction_lens = direction_lens/np.linalg.norm(direction_lens)
+        self.__type = 'lens'
+    
+    def get_radius_lens(self):
+        return self.__radius_lens
+
+    def get_thickness(self):
+        return self.__thickness
+    
+    def get_focal_length(self):
+        return self.__focal_length
+
+    def get_position_lens(self):
+        return self.__position_lens
+    
+    def get_direction_lens(self):
+        return self.__direction_lens
+
+    def get_type(self):
+        return self.__type
+        
+    def get_normal_one(self, position = None):
+        return self.get_direction_lens()
+    
+    def get_normal_two(self, sphere, position):
+        normal = sphere.get_normal(position)
+        return normal
+ 
+    #calculating t for intersection of ray with lens
+    def intersect_one(self, ray):
+        position_lens = np.array(self.get_position_lens())
+        direction_lens = np.array(self.get_direction_lens())
+        radius_lens = self.get_radius_lens()
+        radius_sphere = self.get_radius_sphere()
+        ray_position = ray.get_position()
+        ray_direction = ray.get_direction()
+        lens_plane = Plane(direction_lens, position_lens, [0,0,0], 0, 1, 1.517)
+        t = lens_plane.intersect(ray)
+        if t == np.inf:
+            return t
+        position = ray_position + t*ray_direction
+        if np.linalg.norm(position - position_lens) <= radius_lens:
+            return t
+        return np.inf
+        
+    def intersect_two(self, ray):
+        position_lens = np.array(self.get_position_lens())
+        direction_lens = np.array(self.get_direction_lens())
+        t_0 = self.get_thickness()
+        radius_sphere = self.get_focal_length() * (1.517-1)
+        position_sphere = position_lens + (t_0-radius_sphere) * direction_lens
+        sphere = Sphere(position_sphere, radius_sphere, [0,0,0], 0, 1, 1.517)
+        t = sphere.intersect(ray)
+        return t, sphere
