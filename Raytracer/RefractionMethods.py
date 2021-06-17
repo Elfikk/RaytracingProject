@@ -1,9 +1,35 @@
 import numpy as np
+# import SellmeierCoefficients as cs
+import matplotlib.pyplot as plt
+
+def rgb_decorator(function):
+    #Wavelengths will be sampled exactly the same way for each secondary
+    #ray set. By storing the results of rgb conversion, we will waste less
+    #computation time.
+    cache = {}
+    def wrapper(*args, **kwargs):
+        if args in cache:
+            return cache[args]
+        cache[args] = function(*args,**kwargs)
+        return cache[args]
+    
+    return wrapper
+
+def attenuation_decorator(function):
+    #Same exact thing, but used for the attenuation functions.
+    cache = {}
+    def wrapper(wavelength):
+        if wavelength in cache:
+            return cache[wavelength]
+        cache[wavelength] = function(wavelength)
+        #print('a') just for checking it works (it does)
+        return cache[wavelength]
+
+    return wrapper
 
 def refracted_direction(incident, normal, n_2, n_1):
     #Returns the direction vector of the secondary ray.
-    #Normal is into surface by convention (means we get
-    #rid of some negatives in the equation...). 
+    #Normal is not antiparallel to the ray direction's parallel component.
     #Expects normalised vectors!
     mu = n_1/n_2
     parallel = np.sqrt(1 - mu**2 * (1 - (np.dot(incident,normal)**2)))\
@@ -13,6 +39,64 @@ def refracted_direction(incident, normal, n_2, n_1):
 
 def refracted_ray(intersection, refracted_dir):
     return Ray(intersection, refracted_dir) 
+
+def sellmeier_n(wavelength, Bs, Cs):
+    #COEFFICIENTS MUST BE PASSED AS A NUMPY ARRAY.
+    #Wavelength is in μm, Cs are μm^2 and Bs dimensionless.
+    tops = wavelength**2 * Bs
+    bots = wavelength**2 - Cs
+    terms = tops/bots
+    return np.sqrt(1 + sum(terms))
+
+@rgb_decorator
+def wavelength_rgb(wavelength, gamma = 0.8):
+    #Takes a wavelength in μm and returns an rgb value for it.
+    #Based off an approximation. Real rgb considerations wee bit 
+    #complicated; too much for something that requires quick 
+    #evaluation.
+
+    return red(wavelength,gamma), green(wavelength,gamma), \
+        blue(wavelength,gamma)
+
+def red(wavelength, gamma):
+    #Red component. A lot of elifs sadly but ye.
+    if 0.38 < wavelength < 0.44:
+        return ((0.44-wavelength)/0.06 * attenuation_short(wavelength))**gamma
+    elif 0.51 < wavelength < 0.58:
+        return ((wavelength - 0.51)/0.07)**gamma
+    elif 0.58 <= wavelength <= 0.645:
+        return 1
+    elif 0.645 < wavelength < 0.75:
+        return attenuation_long(wavelength)**gamma
+    return 0
+
+def green(wavelength, gamma):
+    #Same goes for green.
+    if 0.44 < wavelength < 0.49:
+        return ((wavelength - 0.44)/0.05)**gamma
+    elif 0.49 <= wavelength <= 0.58:
+        return 1
+    elif 0.58 < wavelength < 0.645:
+        return ((0.645 - wavelength)/0.065)**gamma
+    return 0
+
+def blue(wavelength, gamma):
+    #Bloo passport.
+    if 0.38 < wavelength < 0.44:
+        return attenuation_short(wavelength)**gamma
+    elif 0.44 <= wavelength <= 0.49:
+        return 1
+    elif 0.49 < wavelength < 0.51:
+        return ((0.51 - wavelength)/0.02)
+    return 0
+
+@attenuation_decorator
+def attenuation_short(wavelength):
+    return 0.3 + 0.7*((wavelength-0.38)/0.06)
+
+@attenuation_decorator
+def attenuation_long(wavelength):
+    return 0.3 + 0.7*((0.75-wavelength)/0.105)
 
 if __name__ == '__main__':
     
@@ -60,3 +144,21 @@ if __name__ == '__main__':
     print(refracted_direction(i, n, 1, 5))
     #Returns [nan, nan, nan] - something to watch out for. Perhaps check
     #before call whether TIR occurs.
+
+    #Testing importing of constants from other files.
+    # Bs = cs.water_Bs
+    # print(Bs)
+
+    # R = wavelength_rgb(0.66, 1)
+    # print(R)
+
+    # a = wavelength_rgb(0.66, 1)
+    # print(a)
+
+    numero = 10
+    samples = np.linspace(0.38, 0.75, numero)
+    colours = np.zeros((numero,numero, 3))
+    for i in range(len(samples)):
+        colours[i] = wavelength_rgb(samples[i])
+    plt.imshow(colours)
+    plt.show()
