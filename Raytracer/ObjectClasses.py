@@ -1,4 +1,5 @@
 import numpy as np
+from RayClass import Ray
 
 #Need definining: Reflectivity, Transmitivity
    
@@ -164,31 +165,51 @@ class lens(SceneObject):
         radius_sphere = self.get_focal_length() * (1.517-1)
         position_sphere = position_lens + (t_0-radius_sphere) * direction_lens
         sphere = Sphere(position_sphere, radius_sphere, [0,0,0], 0, 1, 1.517)
-        return sphere.get_normal()
- 
-    #calculating t for intersection of ray with lens
-    def intersect_plane(self, ray):
-        position_lens = np.array(self.get_position_lens())
-        direction_lens = np.array(self.get_direction_lens())
-        radius_lens = self.get_radius_lens()
-        radius_sphere = self.get_radius_sphere()
-        ray_position = ray.get_position()
-        ray_direction = ray.get_direction()
-        lens_plane = Plane(direction_lens, position_lens, [0,0,0], 0, 1, 1.517)
-        t = lens_plane.intersect(ray)
-        if t == np.inf:
-            return t
-        position = ray_position + t*ray_direction
-        if np.linalg.norm(position - position_lens) <= radius_lens:
-            return t
-        return np.inf
-        
-    def intersect_sphere(self, ray):
-        position_lens = np.array(self.get_position_lens())
-        direction_lens = np.array(self.get_direction_lens())
-        t_0 = self.get_thickness()
-        radius_sphere = self.get_focal_length() * (1.517-1)
-        position_sphere = position_lens + (t_0-radius_sphere) * direction_lens
-        sphere = Sphere(position_sphere, radius_sphere, [0,0,0], 0, 1, 1.517)
-        t = sphere.intersect(ray)
-        return t
+
+    def intersect(self,ray):
+        plane = self.get_plane()
+        sphere = self.get_sphere()
+        ray_position = np.array(ray.get_position_vector())
+        ray_dir = np.array(ray.get_direction_vector())
+        ray_center_1 = Ray(sphere.get_position(),plane.get_normal())
+        ray_center_2 = Ray(sphere.get_position(),-1 * plane.get_normal())
+        distance_1= plane.intersect(ray_center_1)
+        distance_2= plane.intersect(ray_center_2)
+        distance = min(distance_1,distance_2)
+        lens_center = sphere.get_position() + distance * plane.get_normal()
+
+        plane_int = plane.intersect(ray)
+        if plane_int == np.inf:
+            t1 = np.inf
+        else:
+            plane_pos_int = ray_position + plane_int * ray_dir 
+            if np.linalg.norm(plane_pos_int - lens_center) <= self.get_lens_radius():
+                t1 = plane_int
+            else:
+                t1 = np.inf
+
+        sphere_int = sphere.intersect(ray)
+        if sphere_int == np.inf:
+            t2 = np.inf
+        else:
+            sphere_pos_int = ray_position + sphere_int * ray_dir 
+            a = sphere_pos_int - plane.get_plane_position()
+            if distance == distance_1:
+                b = plane.get_normal(sphere_pos_int)
+            else:
+                b = -1* plane.get_normal(sphere_pos_int)
+            if np.dot(a,b) > 0:
+                t2= sphere_int
+            else:
+                t2 = np.inf
+        if min(t1,t2) == np.inf:
+            return np.inf    
+        if min(t1,t2) == t1:
+            self.__normal = plane.get_normal(plane_pos_int)
+            return t1
+        if min(t1,t2) == t2:
+            self.__normal = sphere.get_normal(sphere_pos_int)
+            return t2
+    
+    def get_normal(self,position):
+        return self.__normal
