@@ -37,6 +37,7 @@ def refracted_direction(incident, normal, n_2, n_1):
     perpendicular = mu * (incident - np.dot(incident, normal)*normal )
     return (parallel + perpendicular)/np.linalg.norm(parallel + perpendicular)
 
+
 def refracted_ray(intersection, refracted_dir):
     return Ray(intersection, refracted_dir) 
 
@@ -162,3 +163,4 @@ if __name__ == '__main__':
         colours[i] = wavelength_rgb(samples[i])
     plt.imshow(colours)
     plt.show()
+
