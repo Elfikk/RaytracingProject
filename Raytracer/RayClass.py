@@ -2,6 +2,10 @@ import numpy as np
 import RefractionMethods as rm
 #import networkx as nx
 
+# d = 0
+# e = 0
+# f = 0
+
 class Ray():
 #Class defining our funky rays.
 
@@ -58,19 +62,26 @@ class Ray():
         intersection = self.get_position(distance)
         normal = object.get_normal(intersection)
         dir_vector = self.get_direction_vector()
-        if np.sign(np.dot(dir_vector,normal)) == 1: 
+        if np.sign(np.dot(dir_vector,normal)) == 1.0: 
+            # global d
+            # d += 1
             direction = rm.refracted_direction(self.get_direction_vector(), \
                 normal, n_air, n_obj)
             if not np.isnan(direction[0]):
-                return Ray(intersection + 1e-6 * direction, direction)
+                return Ray(intersection + 1e-4 * direction, direction)
             return self.reflected_ray(object, distance)
+        # global e
+        # e += 1
         direction = rm.refracted_direction(self.get_direction_vector(), \
-            normal, n_obj, n_air)
+            - normal, n_obj, n_air)
+        # print(intersection)
+        # print(direction)
         if np.dot(np.cross(direction, normal), np.cross(direction, normal))\
-             > n_air / n_obj:
-             print(1)
+             > n_air / n_obj**2:
+            #  global f
+            #  f += 1
              return None
-        return Ray(intersection + 1e-6 * direction, direction)
+        return Ray(intersection + 1e-4 * direction, direction)
         
 
 # if __name__ == '__main__':

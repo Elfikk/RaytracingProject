@@ -1,4 +1,5 @@
 import numpy as np
+#import RayClass as rc
    
 class SceneObject():
     #All scene objects inherit from this parent. 
@@ -74,9 +75,11 @@ class Sphere(SceneObject):
             t2 = (-b - np.sqrt(delta)) / 2
             #t1 > t2 always, (neg + pos / pos) > (neg + neg / pos)
             if t2 > 0: #if t2 > 0, then so is t1, so t2 is min.
+                #print('t2')
                 return t2
             elif t1 > 0: #if t2 < 0, then we want t1.
-                return t1 
+                #print('t1')
+                return t1
         return np.inf
 
 class Plane(SceneObject):
@@ -142,3 +145,9 @@ if __name__ == '__main__':
 
     sphere = Sphere(np.array([1,1,1]), 3, (0.1,0.1,0))
     print(sphere.get_normal(np.array([0,1,0])))
+
+    #Rays can reach the god damn second thingy.
+    # ray = rc.Ray(np.array([0,0,0]), np.array([1,0,0]))
+    # ray_sphere = Sphere(np.array([3,0,0]), 1, (0,0,0))
+    # print(ray_sphere.intersect(ray))
+    # So why do they not in the renderer?!

@@ -4,8 +4,9 @@ import networkx as nx
 from ObjectClasses import Sphere, Plane
 import matplotlib.pyplot as plt
 
-a = 0
-b = 0
+# a = 0
+# b = 0
+# c = 0
 
 class Scene():
 #Class used for holding the objects in the environment considered and 
@@ -61,7 +62,7 @@ class Scene():
         #Temporary until shadows and source of light implemented.
         #And that's more complicated than that anyway. So will
         #do for now.
-        return 0.25 #0.1 to prevent clipping during rendering.
+        return 1 
 
     def nearest_intersection(self, ray):
         objects = self.get_objects()
@@ -86,7 +87,7 @@ class Scene():
         self.get_tree().add_node(0, intensity = \
                     self.get_source_intensity(intersection), colour = \
                     object.get_colour(), running_colour = np.array([0,0,0]), \
-                    ray = ray, object = object, distance = distance - 1e-6, 
+                    ray = ray, object = object, distance = distance, 
                     multiplier = 1)
         self.form_tree(max_depth)
         return self.build_colour()
@@ -139,7 +140,7 @@ class Scene():
                 self.get_tree().add_node(next_node, intensity = \
                     self.get_source_intensity(intersection), colour = \
                     np.array(object.get_colour()), running_colour = np.array([0,0,0]), \
-                    ray = rays[i], object = object, distance = distance - 1e-6, \
+                    ray = rays[i], object = object, distance = distance, \
                         multiplier = multipliers[i])
                 self.get_tree().add_edge(parent, next_node)
                 next_node += 1
@@ -148,6 +149,7 @@ class Scene():
         nv = self.get_tree().nodes()
         #Have to make a list to be able to iterate with address along list.
         edges = list(self.get_tree().edges()) 
+        #print(edges)
         for i in range(len(edges)):
             next_edge = edges[-i - 1]
             parent, child = next_edge
@@ -174,12 +176,13 @@ class Scene():
         #Takes the multiplier of the object it reflected/refracted off,
         #so we don't need to track the types of rays used later.
         multipliers = [] 
+        # global a, b, c
+        # c += 1
         if object.get_transmitivity():
-            global a, b
-            b += 1
+            # b += 1
             refracted_ray = ray.refracted_ray(object, distance)
             if type(refracted_ray) == rc.Ray:
-                a += 1
+                # a += 1
                 rays.append(refracted_ray)
                 multipliers.append(object.get_transmitivity())
         if object.get_reflectivity():
@@ -216,10 +219,12 @@ class Scene():
                 + 0.5 * inv_width * horizontal_line
             print(j) #A poor man's progress bar.
             for i in range(width):
+                #print(j,i)
                 #print(self.get_screen())
                 #print(i,j)
                 screen_pos += inv_width * horizontal_line
                 ray = rc.Ray(camera, screen_pos - camera)
+                #ray = rc.Ray(screen_pos, np.array([0,0,1])) #Paraxial rays.
                 self.update_screen(j,i, self.pixel_colour(ray, max_depth))
         
         return self.get_screen()
@@ -237,6 +242,7 @@ class Dispersion_Scene(Scene):
         self.__samples = np.array([0.565])
 
     def set_samples(self, samples):
+        #Samples in the optical wavelength range.
         self.__samples = np.linspace(0.38, 0.75, samples + 2)[1:-1]
 
     def render(self, width = 400, height = 300, max_depth = 3,\
@@ -246,8 +252,6 @@ class Dispersion_Scene(Scene):
 
         return image
     
-
-
 if __name__ == '__main__':
     
     #Testing whether rendering works, before changing main :)
@@ -276,16 +280,19 @@ if __name__ == '__main__':
     #     Sphere(np.array([0, 0, 500]), 250, np.array([0.2,0.7,0.2]), 0.7), \
     #     Plane(np.array([0,1,-0.01]), np.array([0,-50,0]), np.array([0.7,0.2,0.2]), 0.9)]
 
-    objects = [Sphere(np.array([200, 0, 700]), 200, np.array([0.9,0.7,0.9]), .1),\
-        Sphere(np.array([0, 0, 200]), 100, np.array([0.1,0.1,0.1]), 0, transmitivity=1, refractive_index=1.1), \
-            Plane(np.array([0,1,-0.01]), np.array([0,-200,0]), np.array([0.7,0.2,0.2]), 0.9)]
+    objects = [Sphere(np.array([200, 150, 1000]), 400, np.array([0.9,0.7,0.9]), 0.5, transmitivity=0, refractive_index=1.5),\
+        Sphere(np.array([0, 0, 300]), 150, np.array([0.1,0.1,0.1]), 0.1, transmitivity=.9, refractive_index=1.01), \
+        Sphere(np.array([-200, -75, 600]), 100, np.array([0.5,0.5,0.8]), 0.5, transmitivity=0, refractive_index=1.5)]
+        #    Plane(np.array([0,1,-0.01]), np.array([0,-200,0]), np.array([0.7,0.2,0.2]), 0.9)]
 
     #New method of specifying the viewport.
     viewport_corners = (np.array((-200, 150, 0)), np.array((200, 150, 0)),\
          np.array((-200,-150,0)))
+    # viewport_corners = (np.array((-1, 1, 0)), np.array((1, 1, 0)),\
+    #      np.array((-1,-1,0)))
 
     #Good practice is writing stuff earlier.
-    camera_position = np.array((0,0,-10000))
+    camera_position = np.array((0,0,-250))
     # camera_position = np.array([200,200,-500])
     light_pos = np.array((0,0,0)) #meaningless for now
     background_colour = np.array([0, 0, 0])
@@ -295,10 +302,13 @@ if __name__ == '__main__':
 
     #Using default settings.
     #image = scene.render(800, 600, 3)
-    image = scene.render(200, 150)
+    #image = scene.render(2, 2, 3)
+    #image = scene.render(100, 75)
+    #image = scene.render()
+    image = scene.render(1600, 1200, 5)
+    normalisation = np.amax(image)
+    image = image / normalisation #to fix stupid clipping and intensity :)
 
-    #Funky test
-    #image = scene.render(1600, 900)
-    print(a,b)
+    #print(a,b,c, rc.d, rc.e, rc.f) #Data gathering.
     plt.imshow(image)
     plt.show()

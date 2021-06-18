@@ -35,7 +35,7 @@ def refracted_direction(incident, normal, n_2, n_1):
     parallel = np.sqrt(1 - mu**2 * (1 - (np.dot(incident,normal)**2)))\
              * normal
     perpendicular = mu * (incident - np.dot(incident, normal)*normal )
-    return parallel + perpendicular
+    return (parallel + perpendicular)/np.linalg.norm(parallel + perpendicular)
 
 def refracted_ray(intersection, refracted_dir):
     return Ray(intersection, refracted_dir) 

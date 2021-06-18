@@ -16,6 +16,9 @@ objects = [Plane([100,0,5], [150,200,0], [0.7,0.2,0.2], 0.2), \
            Plane([-1,0,1], [0,0,50], [0.,0.5,0.], transmitivity = 0.999,\
            refractive_index = 1.5)]
  
+# objects = [Sphere(np.array([0, 0, 1000]), 150, np.array([0.9,0.7,0.9]), 0, transmitivity=0.1, refractive_index=1.5),\
+#         Sphere(np.array([0, 0, 300]), 150, np.array([0.,0.,0.]), 0.1, transmitivity=.9, refractive_index=1.1)]
+
 def nearest_intersect_objects(ray, objects):
     distances = []
     for object in objects:
