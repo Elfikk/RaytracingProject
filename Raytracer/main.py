@@ -8,14 +8,17 @@ from SceneClass import Scene
 from ObjectClasses import Sphere, Plane
 
 # objects = [Plane([100,0,5], [150,200,0], [0.7,0.2,0.2], 0.2), \
-#            Sphere([-200,-20,200], 300, [0.2,0.7,0.2], 0.7), \
-#            Sphere([-100,500,200], 250, [0.2,0.2,0.7], 0.5)]
+#            Sphere([-300,50,200], 100, [0.2,0.7,0.2], 0.7), \
+#            Sphere([-100,100,200], 25, [0.2,0.2,0.7], 0.5)]
 
 objects = [Plane([100,0,5], [150,200,0], [0.7,0.2,0.2], 0.2), \
-           Sphere([0, 0, 250], 100, [0.2,0.7,0.2], 0.7)]#, \
-        #    Plane([-1,0,1], [0,0,50], [0.,0.5,0.], transmitivity = 0.99,\
-        #    refractive_index = 2)]
+           Sphere([0, 0, 250], 100, [0.2,0.7,0.2], 0.7), \
+           Plane([-1,0,1], [0,0,50], [0.,0.5,0.], transmitivity = 0.999,\
+           refractive_index = 1.5)]
  
+# objects = [Sphere(np.array([0, 0, 1000]), 150, np.array([0.9,0.7,0.9]), 0, transmitivity=0.1, refractive_index=1.5),\
+#         Sphere(np.array([0, 0, 300]), 150, np.array([0.,0.,0.]), 0.1, transmitivity=.9, refractive_index=1.1)]
+
 def nearest_intersect_objects(ray, objects):
     distances = []
     for object in objects:
@@ -53,7 +56,7 @@ def refractive_rendering(ray, objects, max_depth = 3):
     #Currently separate to reflection - easier to write one thing at a
     #time. 
     if nearest_intersect_objects(ray,objects) == np.inf:
-        return [0.53, 0.80 , 0.98] #I'm getting tired of the void
+        return [0., 0. , 0.] 
     else:
         object = nearest_intersect_objects(ray,objects)[0]
         distance = nearest_intersect_objects(ray,objects)[1]
@@ -64,7 +67,7 @@ def refractive_rendering(ray, objects, max_depth = 3):
                 refracted_ray = ray.refracted_ray(object, \
                     ray.get_position(distance))
                 if nearest_intersect_objects(refracted_ray, objects) == np.inf:
-                    colour += transmitivity * np.array([0.53, 0.80 , 0.98])
+                    colour += transmitivity * np.array([0., 0. , 0.])
                     break
                 else:
                     object = nearest_intersect_objects(refracted_ray,objects)[0]
@@ -76,7 +79,6 @@ def refractive_rendering(ray, objects, max_depth = 3):
                     break
                 ray = refracted_ray
         return colour
-
 
 image = np.zeros([300,400,3])
 for i in range(300):

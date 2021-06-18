@@ -1,14 +1,16 @@
 import numpy as np
-
-#Need definining: Reflectivity, Transmitivity
+#import RayClass as rc
    
 class SceneObject():
     #All scene objects inherit from this parent. 
 
     def __init__(self, colour, reflectivity = 1, transmitivity = 0, \
         refractive_index = 1):
+        #Reflectivity is a multiplier for reflected ray intensities, and 
+        #transmitivity for refracted rays. Can't create energy, 
+        #so reflectivity + transmitivity <= 1.
         self.__colour = colour
-        self.__reflectivity = reflectivity
+        self.__reflectivity = reflectivity 
         self.__transmitivity = transmitivity
         self.__refractive_index = refractive_index
 
@@ -65,15 +67,19 @@ class Sphere(SceneObject):
         radius = self.get_radius()
         ray_position = np.array(ray.get_position_vector())
         ray_dir = np.array(ray.get_direction_vector())
-        a = np.dot(ray_dir,ray_dir)
         b = 2 * np.dot(ray_dir, ray_position - position)
         c = np.linalg.norm(ray_position - position) ** 2 - radius ** 2
-        delta = b ** 2 - 4 * c* a
+        delta = b ** 2 - 4 * c #Well spotted with the no need for a.
         if delta > 0:
-            t1 = (-b + np.sqrt(delta)) / (2*a)
-            t2 = (-b - np.sqrt(delta)) / (2*a)
-            if t1 > 0 and t2 > 0:
-                return min(t1, t2)
+            t1 = (-b + np.sqrt(delta)) / 2
+            t2 = (-b - np.sqrt(delta)) / 2
+            #t1 > t2 always, (neg + pos / pos) > (neg + neg / pos)
+            if t2 > 0: #if t2 > 0, then so is t1, so t2 is min.
+                #print('t2')
+                return t2
+            elif t1 > 0: #if t2 < 0, then we want t1.
+                #print('t1')
+                return t1
         return np.inf
 
 class Plane(SceneObject):
@@ -96,8 +102,20 @@ class Plane(SceneObject):
         self.__limits = limits
         self.__type = 'plane'
 
-    def get_normal(self, position = None):
-        return self.__normal
+    def get_normal(self, position = np.array([0, 0, -1000])):
+        #The default is very unlikely to lay on a plane. It's possible,
+        # but we should be fine.
+        orientation_vector = self.get_plane_position() - position
+        orientation_vector = orientation_vector/np.linalg.norm(\
+            orientation_vector)
+        # print(self.__normal, orientation_vector)
+        # print(np.sign(np.dot(orientation_vector, self.__normal)))
+        #(np.dot(orientation_vector, self.__normal), np.sign(np.dot(orientation_vector, self.__normal)))
+        return int(np.sign(np.dot(orientation_vector, self.__normal)))\
+             * self.__normal
+
+    # def get_normal(self, position = None):
+    #     return self.__normal
 
     def get_plane_position(self):
         return self.__plane_position
@@ -124,3 +142,12 @@ class Plane(SceneObject):
 if __name__ == '__main__':
     plane = Plane([100,0,5], [150,200,0], [0.7,0.2,0.2], 0.2)
     print(plane.get_reflectivity())
+
+    sphere = Sphere(np.array([1,1,1]), 3, (0.1,0.1,0))
+    print(sphere.get_normal(np.array([0,1,0])))
+
+    #Rays can reach the god damn second thingy.
+    # ray = rc.Ray(np.array([0,0,0]), np.array([1,0,0]))
+    # ray_sphere = Sphere(np.array([3,0,0]), 1, (0,0,0))
+    # print(ray_sphere.intersect(ray))
+    # So why do they not in the renderer?!
