@@ -154,15 +154,20 @@ class lens(SceneObject):
     def get_type(self):
         return self.__type
         
-    def get_normal_one(self, position = None):
+    def get_normal_plane(self, position = None):
         return self.get_direction_lens()
     
-    def get_normal_two(self, sphere, position):
-        normal = sphere.get_normal(position)
-        return normal
+    def get_normal_sphere(self, position):
+        position_lens = np.array(self.get_position_lens())
+        direction_lens = np.array(self.get_direction_lens())
+        t_0 = self.get_thickness()
+        radius_sphere = self.get_focal_length() * (1.517-1)
+        position_sphere = position_lens + (t_0-radius_sphere) * direction_lens
+        sphere = Sphere(position_sphere, radius_sphere, [0,0,0], 0, 1, 1.517)
+        return sphere.get_normal()
  
     #calculating t for intersection of ray with lens
-    def intersect_one(self, ray):
+    def intersect_plane(self, ray):
         position_lens = np.array(self.get_position_lens())
         direction_lens = np.array(self.get_direction_lens())
         radius_lens = self.get_radius_lens()
@@ -178,7 +183,7 @@ class lens(SceneObject):
             return t
         return np.inf
         
-    def intersect_two(self, ray):
+    def intersect_sphere(self, ray):
         position_lens = np.array(self.get_position_lens())
         direction_lens = np.array(self.get_direction_lens())
         t_0 = self.get_thickness()
@@ -186,4 +191,4 @@ class lens(SceneObject):
         position_sphere = position_lens + (t_0-radius_sphere) * direction_lens
         sphere = Sphere(position_sphere, radius_sphere, [0,0,0], 0, 1, 1.517)
         t = sphere.intersect(ray)
-        return t, sphere
+        return t
