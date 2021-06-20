@@ -1,5 +1,5 @@
 import numpy as np
-# import SellmeierCoefficients as cs
+# import SellmeierCoefficients as sc
 import matplotlib.pyplot as plt
 
 def rgb_decorator(function):
@@ -54,9 +54,10 @@ def wavelength_rgb(wavelength, gamma = 0.8):
     #Based off an approximation. Real rgb considerations wee bit 
     #complicated; too much for something that requires quick 
     #evaluation.
-
-    return red(wavelength,gamma), green(wavelength,gamma), \
-        blue(wavelength,gamma)
+    if isinstance(wavelength, float):
+        return np.array([red(wavelength,gamma), green(wavelength,gamma), \
+            blue(wavelength,gamma)])
+    return np.array((1,1,1)) #None type returns white colour (ray made of all colours)
 
 def red(wavelength, gamma):
     #Red component. A lot of elifs sadly but ye.
@@ -97,6 +98,16 @@ def attenuation_short(wavelength):
 @attenuation_decorator
 def attenuation_long(wavelength):
     return 0.3 + 0.7*((0.75-wavelength)/0.105)
+
+def correlation(colour1, colour2):
+    #BTEC Absorption.
+    #Max magnitude is 3, but want values between 0 and 1
+    multiplier = np.dot(colour1, colour2)/3 
+    return multiplier
+
+def wavelength_correlation(wavelength, object_colour):
+    ray_colour = wavelength_rgb(wavelength)
+    return correlation(ray_colour, object_colour)
 
 if __name__ == '__main__':
     
@@ -155,10 +166,27 @@ if __name__ == '__main__':
     # a = wavelength_rgb(0.66, 1)
     # print(a)
 
-    numero = 10
-    samples = np.linspace(0.38, 0.75, numero)
-    colours = np.zeros((numero,numero, 3))
-    for i in range(len(samples)):
-        colours[i] = wavelength_rgb(samples[i])
-    plt.imshow(colours)
-    plt.show()
+    # numero = 1000
+    # samples = np.linspace(0.38, 0.75, numero)[1:-1]
+    # colours = np.zeros((numero-2,numero-2, 3))
+    # for i in range(len(samples)):
+    #     colours[i] = wavelength_rgb(samples[i]) 
+    # print(255 * sum(colours)/(numero-2)) #RGB values don't average at white.
+    # plt.imshow(colours)
+    # plt.show()
+
+    #print(wavelength_rgb(None))
+    # samples = np.linspace(0.38, 0.75, 102)[1:-1]
+    # correlation_list = []
+    # for i in range(len(samples)):
+    #     correlation_list.append(wavelength_correlation(samples[i], \
+    #         np.array([1, 0, 0])))
+    # correlation_samples = np.array(correlation_list)
+    # plt.plot(samples, correlation_samples)
+    # plt.show()
+
+    
+
+    # n = sellmeier_n(0.565, sc.flint_glass_Bs, sc.flint_glass_Cs)
+    # print(n)
+    

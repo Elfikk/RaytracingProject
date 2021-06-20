@@ -1,8 +1,10 @@
 import numpy as np
 import RayClass as rc
 import networkx as nx
-from ObjectClasses import Sphere, Plane
+from ObjectClasses import Sphere, Plane, Circle
 import matplotlib.pyplot as plt
+import SellmeierCoefficients as sc
+import RefractionMethods as rm
 
 # a = 0
 # b = 0
@@ -223,8 +225,8 @@ class Scene():
                 #print(self.get_screen())
                 #print(i,j)
                 screen_pos += inv_width * horizontal_line
-                ray = rc.Ray(camera, screen_pos - camera)
-                #ray = rc.Ray(screen_pos, np.array([0,0,1])) #Paraxial rays.
+                #ray = rc.Ray(camera, screen_pos - camera)
+                ray = rc.Ray(screen_pos, np.array([0,0,1])) #Paraxial rays.
                 self.update_screen(j,i, self.pixel_colour(ray, max_depth))
         
         return self.get_screen()
@@ -245,13 +247,141 @@ class Dispersion_Scene(Scene):
         #Samples in the optical wavelength range.
         self.__samples = np.linspace(0.38, 0.75, samples + 2)[1:-1]
 
+    def get_samples(self):
+        return self.__samples
+
     def render(self, width = 400, height = 300, max_depth = 3,\
-         dispersion_samples = 8):
+        dispersion_samples = 8):
         self.set_samples(dispersion_samples)
         image = Scene.render(self, width, height, max_depth)
 
         return image
+
+    def intersection_rays(self, ray, object, distance):
+        #Method for finding the reflected and refracted rays off an object.
+        rays = []
+        #Takes the multiplier of the object it reflected/refracted off,
+        #so we don't need to track the types of rays used later.
+        multipliers = [] 
+        if object.get_transmitivity():
+            if ray.get_wavelength() == None:
+                wavelengths = self.get_samples()
+                sample_number = len(wavelengths)
+                for i in range(len(wavelengths)):
+                    refracted_ray = ray.wavelength_refraction(object, distance, \
+                        wavelengths[i])
+                    if type(refracted_ray) == rc.Ray:
+                        rays.append(refracted_ray)
+                        multipliers.append(object.get_transmitivity()/sample_number)
+            else:
+                refracted_ray = ray.wavelength_refraction(object, distance, \
+                        ray.get_wavelength())
+                if type(refracted_ray) == rc.Ray:
+                    rays.append(refracted_ray)
+                    multipliers.append(object.get_transmitivity())
+        if object.get_reflectivity():
+            rays.append(ray.reflected_ray(object, distance, ray.get_wavelength()))
+            multipliers.append(object.get_reflectivity())
+        return rays, multipliers
     
+    def form_children(self, rays, parent, multipliers):
+        #parent is the id of the (parent) node above.
+
+        wavelengths = {}
+        number_of_samples = len(self.get_samples())
+        for wavelength in self.get_samples():
+            wavelengths[wavelength] = 0
+
+        #We name nodes by ID numbers in order in which they were added.
+        next_node = max(self.get_tree().nodes) + 1
+
+        #Currently loops over two rays, but remember, modified dispersion
+        #will require more!
+        for i in range(len(rays)):
+            object, distance = self.nearest_intersection(rays[i])
+            if distance != np.inf:
+                #So that it doesn't refer to the same dictionary (python at its finest)
+                ray_wavelengths = wavelengths.copy() 
+                intersection = rays[i].get_position(distance)
+                if rays[i].get_wavelength() == None:
+                    for wavelength in ray_wavelengths: #Iterates over keys
+                        ray_wavelengths[wavelength] += multipliers[i]/number_of_samples
+                    self.get_tree().add_node(next_node, intensity = \
+                        self.get_source_intensity(intersection), wavelengths =\
+                        ray_wavelengths, ray = rays[i], object = object, \
+                        distance = distance)
+                    self.get_tree().add_edge(parent, next_node)
+                else:
+                    ray_wavelengths[rays[i].get_wavelength()] = multipliers[i]# \
+                        # * rm.wavelength_correlation(rays[i].get_wavelength(),\
+                        #      object.get_colour())
+                    self.get_tree().add_node(next_node, intensity = \
+                        self.get_source_intensity(intersection), wavelengths =\
+                        ray_wavelengths, ray = rays[i], object = object, \
+                        distance = distance)
+                    self.get_tree().add_edge(parent, next_node)
+                next_node += 1
+
+    def pixel_colour(self, ray, max_depth):
+        #The meat of the raytracer; this routine combines all the methods
+        #involved in finding one pixel's colour.
+        object, distance = self.nearest_intersection(ray)
+        if distance == np.inf:
+            return self.get_background()
+        #print(distance)
+        wavelengths = self.get_samples()
+        sample_number = len(wavelengths)
+        ray_wavelengths = {}
+        for wavelength in wavelengths:
+            ray_wavelengths[wavelength] = 1/sample_number
+        intersection = ray.get_position(distance)
+        self.get_tree().add_node(0, intensity = \
+                    self.get_source_intensity(intersection), wavelengths = \
+                    ray_wavelengths, ray = ray, object = object, \
+                    distance = distance)
+        self.form_tree(max_depth)
+        return self.build_colour()
+
+    def build_colour(self):
+        nv = self.get_tree().nodes()
+        #Have to make a list to be able to iterate with address along list.
+        edges = np.array(list(self.get_tree().edges()))
+        #print(edges)
+        #for i in range(len(edges)):
+
+        wavelengths = {}
+        number_of_samples = len(self.get_samples())
+        for wavelength in self.get_samples():
+            wavelengths[wavelength] = 0
+
+        while len(edges) != 0:
+            
+            next_edge = edges[-1]
+            parent = next_edge[0]
+            #Cursed line, I hate numpy syntax
+            children_addresses = np.where(edges[:,0] == parent) 
+            childrens = edges[children_addresses] #As Howard would say.
+            children_wavelengths = wavelengths.copy()
+            #intensities = np.zeros(number_of_samples)
+            for i in range(len(childrens)):
+                for wavelength in nv[childrens[i][1]]['wavelengths']:
+                    children_wavelengths[wavelength] += \
+                        nv[childrens[i][1]]['wavelengths'][wavelength]
+
+            nv[parent]['wavelengths'] = children_wavelengths.copy()
+            edges = np.delete(edges, children_addresses, 0)
+
+        final_wavelengths = nv[0]['wavelengths'] # oh boi
+        intensity_total = sum(final_wavelengths.values())
+        final_colour = np.array([0.,0.,0.])
+        for wavelength in final_wavelengths:
+            # print(wavelength)
+            # print(final_wavelengths[wavelength])
+            final_colour += final_wavelengths[wavelength] * \
+                rm.wavelength_rgb(wavelength) / intensity_total
+        self.get_tree().clear()
+        return final_colour        
+
 if __name__ == '__main__':
     
     #Testing whether rendering works, before changing main :)
@@ -276,36 +406,66 @@ if __name__ == '__main__':
 
     # objects = [Sphere(np.array([150, 0, 250]), 100, np.array([0.2,0.7,0.2]), 0.7)]
 
-    # objects = [Sphere(np.array([0, 0, 200]), 100, np.array([0.1,0.1,0.1]), 0.01, transmitivity=0.99), \
+    # objects = [Sphere(np.array([0, 0, 200]), 100, np.array([0.1,0.1,0.1]), 0.01, transmitivity=0.99,\
+    #     sellmeier_Bs=sc.crown_glass_Bs, sellmeier_Cs=sc.crown_glass_Cs), \
     #     Sphere(np.array([0, 0, 500]), 250, np.array([0.2,0.7,0.2]), 0.7), \
     #     Plane(np.array([0,1,-0.01]), np.array([0,-50,0]), np.array([0.7,0.2,0.2]), 0.9)]
 
-    objects = [Sphere(np.array([200, 150, 1000]), 400, np.array([0.9,0.7,0.9]), 0.5, transmitivity=0, refractive_index=1.5),\
-        Sphere(np.array([0, 0, 300]), 150, np.array([0.1,0.1,0.1]), 0.1, transmitivity=.9, refractive_index=1.01), \
-        Sphere(np.array([-200, -75, 600]), 100, np.array([0.5,0.5,0.8]), 0.5, transmitivity=0, refractive_index=1.5)]
-        #    Plane(np.array([0,1,-0.01]), np.array([0,-200,0]), np.array([0.7,0.2,0.2]), 0.9)]
+    # objects = [Sphere(np.array([100, 150, 1000]), 200, np.array([0.9,0.7,0.9]), 0.5, transmitivity=0, refractive_index=1.5),\
+    #     Sphere(np.array([0, 0, 300]), 150, np.array([0.1,0.1,0.1]), 0.1, transmitivity=.9, refractive_index=1.5), \
+    #     Sphere(np.array([-200, -75, 600]), 100, np.array([0.5,0.5,0.8]), 0.5, transmitivity=0, refractive_index=1.5)]
+    # #     #    Plane(np.array([0,1,-0.01]), np.array([0,-200,0]), np.array([0.7,0.2,0.2]), 0.9)]
+
+    # # objects = [Sphere(np.array([100, 150, 1000]), 200, np.array([0.9,0.7,0.9]), 0.5, transmitivity=0, refractive_index=1.5),\
+    #     Sphere(np.array([0, 0, 300]), 150, np.array([0.1,0.1,0.1]), 0.1, transmitivity=.9, refractive_index=1.01), \
+    #     Sphere(np.array([-200, -75, 600]), 100, np.array([0.5,0.5,0.8]), 0.5, transmitivity=0, refractive_index=1.5)]
+    # #     #    Plane(np.array([0,1,-0.01]), np.array([0,-200,0]), np.array([0.7,0.2,0.2]), 0.9)]
+
+    objects = [Sphere(np.array([200, 150, 3000]), 400, np.array([0.,0.,0.]), 0.),\
+        Sphere(np.array([0, 0, 300]), 150, np.array([0.,0.,0.]), 0., transmitivity=1,\
+             sellmeier_Bs=sc.flint_glass_Bs, sellmeier_Cs=sc.flint_glass_Cs, refractive_index=1.6)]#, \
+    #     # Sphere(np.array([-200, -75, 600]), 100, np.array([0.5,0.5,0.8]), 0.5, transmitivity=0, \
+        #     refractive_index=1.5)]
+
+    # objects = [Circle(np.array([1,0,-0.1]), np.array([150,0,0]), np.array([0.1, 0.5, 0.8]), radius=50)]
 
     #New method of specifying the viewport.
-    viewport_corners = (np.array((-200, 150, 0)), np.array((200, 150, 0)),\
-         np.array((-200,-150,0)))
+    # viewport_corners = (np.array((-200, 150, 0)), np.array((200, 150, 0)),\
+    #      np.array((-200,-150,0)))
+
+    # viewport_corners = (np.array((-55, 20, 0)), np.array((-40, 20, 0)),\
+    #      np.array((-55,-30,0)))
+
+    # viewport_corners = (np.array((-400, 300, 0)), np.array((400, 300, 0)),\
+    #      np.array((-400,-300,0)))
+
     # viewport_corners = (np.array((-1, 1, 0)), np.array((1, 1, 0)),\
     #      np.array((-1,-1,0)))
 
-    #Good practice is writing stuff earlier.
+    viewport_corners = (np.array((-46, -7.5, 0)), np.array((-44, -7.5, 0)),\
+          np.array((-46,-12.5,0)))
+
+    # #Good practice is writing stuff earlier.
     camera_position = np.array((0,0,-250))
     # camera_position = np.array([200,200,-500])
     light_pos = np.array((0,0,0)) #meaningless for now
     background_colour = np.array([0, 0, 0])
 
-    scene = Scene(objects, camera_position, viewport_corners, light_pos,\
+    scene = Dispersion_Scene(objects, camera_position, viewport_corners, light_pos,\
          background_colour)
 
     #Using default settings.
     #image = scene.render(800, 600, 3)
     #image = scene.render(2, 2, 3)
-    #image = scene.render(100, 75)
-    #image = scene.render()
-    image = scene.render(1600, 1200, 5)
+
+    #image = scene.render(75, 250, 2)
+
+    #image = scene.render(400, 300, 3, 4)
+    #image = scene.render(2,2,2,2)
+    #image = scene.render(1600, 1200, 5)
+    #image = scene.render(200, 500, 2)
+    #image = scene.render(50, 50, 2)
+    image = scene.render(20, 50, 2, 16)
     normalisation = np.amax(image)
     image = image / normalisation #to fix stupid clipping and intensity :)
 
