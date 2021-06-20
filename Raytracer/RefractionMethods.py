@@ -43,7 +43,7 @@ def refracted_ray(intersection, refracted_dir):
 
 def sellmeier_n(wavelength, Bs, Cs):
     #COEFFICIENTS MUST BE PASSED AS A NUMPY ARRAY.
-    #Wavelength is in μm, Cs are μm^2 and Bs dimensionless.
+    #Wavelength is in m, Cs are micro - m^2 and Bs dimensionless.
     tops = wavelength**2 * Bs
     bots = wavelength**2 - Cs
     terms = tops/bots
@@ -51,7 +51,7 @@ def sellmeier_n(wavelength, Bs, Cs):
 
 @rgb_decorator
 def wavelength_rgb(wavelength, gamma = 0.8):
-    #Takes a wavelength in μm and returns an rgb value for it.
+    #Takes a wavelength in micro - m and returns an rgb value for it.
     #Based off an approximation. Real rgb considerations wee bit 
     #complicated; too much for something that requires quick 
     #evaluation.

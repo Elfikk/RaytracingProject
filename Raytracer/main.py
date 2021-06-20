@@ -5,16 +5,18 @@ import matplotlib.pyplot as plt
 #for my own benefit. 
 from RayClass import Ray
 from SceneClass import Scene
-from ObjectClasses import Sphere, Plane
+from ObjectClasses import Sphere, Plane,Lens
+import networkx as nx
 
 # objects = [Plane([100,0,5], [150,200,0], [0.7,0.2,0.2], 0.2), \
 #            Sphere([-300,50,200], 100, [0.2,0.7,0.2], 0.7), \
 #            Sphere([-100,100,200], 25, [0.2,0.2,0.7], 0.5)]
 
 objects = [Plane([100,0,5], [150,200,0], [0.7,0.2,0.2], 0.2), \
-           Sphere([0, 0, 250], 100, [0.2,0.7,0.2], 0.7), \
-           Plane([-1,0,1], [0,0,50], [0.,0.5,0.], transmitivity = 0.999,\
-           refractive_index = 1.5)]
+           Sphere([0, 0, 250], 100, [0.2,0.7,0.2], 0.7),
+           Lens([10,0,250],[0,0,1], [0,0,250], 200, 100)]
+           #Plane([-1,0,1], [0,0,50], [0.,0.5,0.], transmitivity = 0.999,\
+           #refractive_index = 1.5)]
  
 # objects = [Sphere(np.array([0, 0, 1000]), 150, np.array([0.9,0.7,0.9]), 0, transmitivity=0.1, refractive_index=1.5),\
 #         Sphere(np.array([0, 0, 300]), 150, np.array([0.,0.,0.]), 0.1, transmitivity=.9, refractive_index=1.1)]
@@ -35,6 +37,7 @@ def colour(ray, objects, max_depth = 5):
     else:
         object = nearest_intersect_objects(ray,objects)[0]
         distance = nearest_intersect_objects(ray,objects)[1]
+
         reflectivity = object.get_reflectivity()
         colour = (1-reflectivity) * np.array(object.get_colour())
         for i in range(max_depth):
@@ -56,7 +59,7 @@ def refractive_rendering(ray, objects, max_depth = 3):
     #Currently separate to reflection - easier to write one thing at a
     #time. 
     if nearest_intersect_objects(ray,objects) == np.inf:
-        return [0., 0. , 0.] 
+        return [0.8, 0.6 , 0.7] 
     else:
         object = nearest_intersect_objects(ray,objects)[0]
         distance = nearest_intersect_objects(ray,objects)[1]
@@ -67,13 +70,12 @@ def refractive_rendering(ray, objects, max_depth = 3):
                 refracted_ray = ray.refracted_ray(object, \
                     ray.get_position(distance))
                 if nearest_intersect_objects(refracted_ray, objects) == np.inf:
-                    colour += transmitivity * np.array([0., 0. , 0.])
                     break
                 else:
                     object = nearest_intersect_objects(refracted_ray,objects)[0]
                     distance = nearest_intersect_objects(refracted_ray,objects)[1]
                     refracted_colour = object.get_colour()
-                    colour += transmitivity * np.array(refracted_colour)
+                    colour = colour + (1- transmitivity)* np.array(refracted_colour)
                     transmitivity *= object.get_transmitivity()
                 if transmitivity == 0:
                     break

@@ -1,6 +1,6 @@
 from numpy import array
 
-#Sellmeier approximation holds from near UV to 2.3 μm, as per Schlott, so
+#Sellmeier approximation holds from near UV to 2.3 micro m, as per Schlott, so
 #it's well within our range.
 
 #From the random paper I found 

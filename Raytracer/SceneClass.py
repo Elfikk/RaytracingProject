@@ -1,7 +1,7 @@
 import numpy as np
 import RayClass as rc
 import networkx as nx
-from ObjectClasses import Sphere, Plane
+from ObjectClasses import Sphere, Plane , Lens
 import matplotlib.pyplot as plt
 
 # a = 0
@@ -251,6 +251,21 @@ class Dispersion_Scene(Scene):
         image = Scene.render(self, width, height, max_depth)
 
         return image
+
+def Prism(position,normal,limits,a): #equilateral prism , triangular face towards x, a  is a scaling factor
+
+    transform = [[1,0,0],[0,-0.5,(np.sqrt(3/4))],[0,np.sqrt(3)/2,-0.5]] # rotate normal by 120 degrees
+    normal2 = np.matmul(transform, normal)
+    normal3 = np.matmul(transform,normal2)
+    position2 = position + np.array([0,0,50])*a
+    position3 = (position+position2)/2 + np.array([0,-50,0])*a
+    Plane1 = Plane(position,normal, colour = [0,0,0], reflectivity = 0,\
+                   transmitivity = 1, refractive_index = 1.2,limits = limits)
+    Plane2 = Plane(normal2,position2,colour = [0,0,0], reflectivity = 0, \
+                transmitivity = 1, refractive_index = 1.2,limits = limits)
+    Plane3 = Plane(normal3,position3,colour = [0,0,0], reflectivity = 0, \
+                   transmitivity = 1,refractive_index = 1.2, limits = limits)
+    return Plane1, Plane2, Plane3
     
 if __name__ == '__main__':
     
@@ -279,23 +294,33 @@ if __name__ == '__main__':
     # objects = [Sphere(np.array([0, 0, 200]), 100, np.array([0.1,0.1,0.1]), 0.01, transmitivity=0.99), \
     #     Sphere(np.array([0, 0, 500]), 250, np.array([0.2,0.7,0.2]), 0.7), \
     #     Plane(np.array([0,1,-0.01]), np.array([0,-50,0]), np.array([0.7,0.2,0.2]), 0.9)]
+    
+    prism = Prism(np.array([0, 100, 200]), np.array([0,10,20]),[100,200],10)
 
-    objects = [Sphere(np.array([200, 150, 1000]), 400, np.array([0.9,0.7,0.9]), 0.5, transmitivity=0, refractive_index=1.5),\
-        Sphere(np.array([0, 0, 300]), 150, np.array([0.1,0.1,0.1]), 0.1, transmitivity=.9, refractive_index=1.01), \
-        Sphere(np.array([-200, -75, 600]), 100, np.array([0.5,0.5,0.8]), 0.5, transmitivity=0, refractive_index=1.5)]
-        #    Plane(np.array([0,1,-0.01]), np.array([0,-200,0]), np.array([0.7,0.2,0.2]), 0.9)]
+    
+    #objects = [Sphere(np.array([200, 150, 1000]), 400, np.array([0.9,0.7,0.9]), 0.5, transmitivity=0, refractive_index=1.5),\
+               #*prism]
+        #Sphere(np.array([0, 0, 300]), 150, np.array([0.1,0.1,0.1]), 0.1, transmitivity=.9, refractive_index=1.01), \
+        #Sphere(np.array([-200, -75, 600]), 100, np.array([0.5,0.5,0.8]), 0.5, transmitivity=0, refractive_index=1.5),\
+           
+        #Lens([0,10,250],[0,0,1], [0,0,250], 200)]
+        #   Plane(np.array([0,1,-0.01]), np.array([0,-200,0]), np.array([0.7,0.2,0.2]), 0.9)]
+    
+    objects = [Plane(np.array([0,-100,5]), [200,-150,0], [0.7,0.2,0.2], 0.2), \
+           Sphere([0, 0, 250], 100, [0.2,0.7,0.2], 0.7), *prism]
+          # Lens([10,0,250],[0,0,1], [0,0,250], 200)]
 
     #New method of specifying the viewport.
+    #viewport_corners = (np.array((-200, 150, 0)), np.array((200, 150, 0)),\
+        # np.array((-200,-150,0)))
     viewport_corners = (np.array((-200, 150, 0)), np.array((200, 150, 0)),\
          np.array((-200,-150,0)))
-    # viewport_corners = (np.array((-1, 1, 0)), np.array((1, 1, 0)),\
-    #      np.array((-1,-1,0)))
-
     #Good practice is writing stuff earlier.
+    #camera_position = np.array((0,0,-250))
     camera_position = np.array((0,0,-250))
     # camera_position = np.array([200,200,-500])
     light_pos = np.array((0,0,0)) #meaningless for now
-    background_colour = np.array([0, 0, 0])
+    background_colour = np.array([0.5, 0.2, 0.3])
 
     scene = Scene(objects, camera_position, viewport_corners, light_pos,\
          background_colour)
@@ -303,9 +328,9 @@ if __name__ == '__main__':
     #Using default settings.
     #image = scene.render(800, 600, 3)
     #image = scene.render(2, 2, 3)
-    #image = scene.render(100, 75)
+    image = scene.render(100, 70)
     #image = scene.render()
-    image = scene.render(1600, 1200, 5)
+    #image = scene.render(1600, 1200, 5)
     normalisation = np.amax(image)
     image = image / normalisation #to fix stupid clipping and intensity :)
 

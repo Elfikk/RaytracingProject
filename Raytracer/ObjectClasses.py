@@ -1,5 +1,5 @@
 import numpy as np
-#import RayClass as rc
+from RayClass import Ray
    
 class SceneObject():
     #All scene objects inherit from this parent. 
@@ -85,8 +85,7 @@ class Sphere(SceneObject):
 class Plane(SceneObject):
 
     def __init__(self, normal, plane_position, colour, reflectivity = 1, \
-        transmitivity = 0, refractive_index = 1, limits = [-np.inf, np.inf, \
-         -np.inf, np.inf, -np.inf, np.inf]):
+        transmitivity = 0, refractive_index = 1, limits = [np.inf,np.inf]):
         #r.n = r.a form, where a is some arbitrary position on the plane.
         #Normal and position are 3x1 arrays. Limits formatting:
         #[x_min, x_max, y_min, y_max, z_min, z_max].
@@ -137,8 +136,93 @@ class Plane(SceneObject):
         t = np.dot(plane_position-ray_position,plane_norm)/delta
         if t < 0:
             return np.inf
+        if self.get_limits() != [np.inf,np.inf]:
+            point = ray_position + t + ray_dir
+            if self.limits(point,self.get_limits()) == False:
+                return np.inf
         return t
+    
+    def limits(self, point,lengths):
+        position = self.get_plane_position()
+        if np.abs(point[0] - position[0]) > lengths[1]/2:
+            return False
+        direction = np.cross(self.get_normal(),[1,0,0])
+        length = (point[1] - position[1])/direction[1]
+        if length > lengths[0]/2:
+            return False
+        return True
 
+class Lens(SceneObject):
+
+    def __init__(self, plane_position, plane_normal, sphere_position, sphere_radius,colour=[0,0,0], reflectivity = 0, \
+        transmitivity = 1, refractive_index = 1.52):
+        SceneObject.__init__(self, colour, reflectivity, transmitivity,\
+            refractive_index)
+        self.__plane = Plane(plane_position,plane_normal, colour,reflectivity = 0 )
+        self.__sphere = Sphere(sphere_position,sphere_radius, colour,reflectivity = 0)
+        self.__type = 'lens'
+
+    def get_plane(self):
+        return self.__plane
+
+    def get_sphere(self):
+        return self.__sphere
+
+    def get_type(self):
+        return self.__type
+
+    def get_normal(self,position):
+        return self.__normal
+    
+    def intersect(self,ray):
+        plane = self.get_plane()
+        sphere = self.get_sphere()
+        ray_position = np.array(ray.get_position_vector())
+        ray_dir = np.array(ray.get_direction_vector())
+        ray_center_1 = Ray(sphere.get_position(),plane.get_normal())
+        ray_center_2 = Ray(sphere.get_position(),-1 * plane.get_normal())
+        distance_1= plane.intersect(ray_center_1)
+        distance_2= plane.intersect(ray_center_2)
+        distance = min(distance_1,distance_2)
+        lens_center = sphere.get_position() + distance * plane.get_normal()
+        plane_int = plane.intersect(ray)
+        rand_vector = plane.get_normal() + [1,0,0]
+        plane_vector = np.cross(plane.get_normal(),rand_vector)
+        ray_plane = Ray(lens_center,plane_vector)
+        lens_radius = sphere.intersect(ray_plane)
+        if lens_radius == np.inf:
+            lens_radius =0
+
+        if plane_int == np.inf:
+            t1 = np.inf
+        else:
+            plane_pos_int = ray_position + plane_int * ray_dir 
+            if np.linalg.norm(plane_pos_int - lens_center) <= lens_radius:
+                t1 = plane_int
+            else:
+                t1 = np.inf
+
+        sphere_int = sphere.intersect(ray)
+        if sphere_int == np.inf:
+            t2 = np.inf
+        else:
+            sphere_pos_int = ray_position + sphere_int * ray_dir 
+            a = sphere_pos_int - plane.get_plane_position()
+            if np.dot(a,plane.get_normal()) > 0:
+                t2= sphere_int
+            else:
+                t2 = np.inf
+
+        if min(t1,t2) == np.inf:
+            return np.inf
+        if min(t1,t2) == t1:
+            self.__normal = plane.get_normal(plane_pos_int)
+            return t1
+        if min(t1,t2) == t2:
+            self.__normal = sphere.get_normal(sphere_pos_int)
+            return t2
+    
+    
 if __name__ == '__main__':
     plane = Plane([100,0,5], [150,200,0], [0.7,0.2,0.2], 0.2)
     print(plane.get_reflectivity())
