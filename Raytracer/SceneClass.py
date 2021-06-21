@@ -252,19 +252,22 @@ class Dispersion_Scene(Scene):
 
         return image
 
-def Prism(position,normal,limits,a): #equilateral prism , triangular face towards x, a  is a scaling factor
+def Prism(position,normal,limits): #equilateral prism , triangular face towards x, a  is a scaling factor
 
-    transform = [[1,0,0],[0,-0.5,(np.sqrt(3/4))],[0,np.sqrt(3)/2,-0.5]] # rotate normal by 120 degrees
+    transform = [[1,0,0],[0,-0.5,(-np.sqrt(3/4))],[0,np.sqrt(3)/2,-0.5]] # rotate normal by 120 degrees
     normal2 = np.matmul(transform, normal)
     normal3 = np.matmul(transform,normal2)
-    position2 = position + np.array([0,0,50])*a
-    position3 = (position+position2)/2 + np.array([0,-50,0])*a
-    Plane1 = Plane(position,normal, colour = [0,0,0], reflectivity = 0,\
-                   transmitivity = 1, refractive_index = 1.2,limits = limits)
-    Plane2 = Plane(normal2,position2,colour = [0,0,0], reflectivity = 0, \
-                transmitivity = 1, refractive_index = 1.2,limits = limits)
-    Plane3 = Plane(normal3,position3,colour = [0,0,0], reflectivity = 0, \
-                   transmitivity = 1,refractive_index = 1.2, limits = limits)
+    direction = np.cross([1,0,0],normal)
+    direction2 = np.cross([1,0,0],normal2)
+    direction3 = np.cross([1,0,0],normal3)
+    position2 = position +  (limits[0]/2) * (direction + direction2)
+    position3 = position2 +  (limits[0]/2) * (direction2 + direction3)
+    Plane1 = Plane(position,normal, colour = [0.1,0.3,0.7], reflectivity = 0,\
+                   transmitivity = 0, refractive_index = 1.2,limits = limits)
+    Plane2 = Plane(normal2,position2,colour = [0.1,0.3,0.7], reflectivity = 0, \
+                transmitivity = 0, refractive_index = 1.2,limits = limits)
+    Plane3 = Plane(normal3,position3,colour = [0.1,0.3,0.7], reflectivity = 0, \
+                   transmitivity = 0,refractive_index = 1.2, limits = limits)
     return Plane1, Plane2, Plane3
     
 if __name__ == '__main__':
@@ -295,7 +298,7 @@ if __name__ == '__main__':
     #     Sphere(np.array([0, 0, 500]), 250, np.array([0.2,0.7,0.2]), 0.7), \
     #     Plane(np.array([0,1,-0.01]), np.array([0,-50,0]), np.array([0.7,0.2,0.2]), 0.9)]
     
-    prism = Prism(np.array([0, 100, 200]), np.array([0,10,20]),[100,200],10)
+    prism = Prism(np.array([0,200,250]), np.array([1,0,0]),[550,100])
 
     
     #objects = [Sphere(np.array([200, 150, 1000]), 400, np.array([0.9,0.7,0.9]), 0.5, transmitivity=0, refractive_index=1.5),\

@@ -146,9 +146,9 @@ class Plane(SceneObject):
         position = self.get_plane_position()
         if np.abs(point[0] - position[0]) > lengths[1]/2:
             return False
-        direction = np.cross(self.get_normal(),[1,0,0])
+        direction = np.cross([1,0,0],self.get_normal())
         length = (point[1] - position[1])/direction[1]
-        if length > lengths[0]/2:
+        if np.abs(length) > lengths[0]/2:
             return False
         return True
 
