@@ -1,11 +1,14 @@
 import numpy as np
 from RayClass import Ray
    
+from RefractionMethods import sellmeier_n
+   
 class SceneObject():
     #All scene objects inherit from this parent. 
 
     def __init__(self, colour, reflectivity = 1, transmitivity = 0, \
-        refractive_index = 1):
+        refractive_index = 1, sellmeier_Bs = np.array([]), sellmeier_Cs =\
+             np.array([])):
         #Reflectivity is a multiplier for reflected ray intensities, and 
         #transmitivity for refracted rays. Can't create energy, 
         #so reflectivity + transmitivity <= 1.
@@ -13,6 +16,8 @@ class SceneObject():
         self.__reflectivity = reflectivity 
         self.__transmitivity = transmitivity
         self.__refractive_index = refractive_index
+        self.__Bs = sellmeier_Bs
+        self.__Cs = sellmeier_Cs
 
     def get_colour(self):
         return self.__colour
@@ -26,6 +31,9 @@ class SceneObject():
     def get_refractive_index(self):
         return self.__refractive_index
 
+    def functional_n(self, wavelength):
+        return sellmeier_n(wavelength, self.__Bs, self.__Cs)
+
     def intersect(self, ray):
         #This should never need to be called, but prevents crashes 
         #if you forget to define your intersection function.
@@ -34,12 +42,13 @@ class SceneObject():
 class Sphere(SceneObject):
 
     def __init__(self, position, radius, colour, reflectivity = 1, \
-         transmitivity = 0, refractive_index = 1):
+         transmitivity = 0, refractive_index = 1, sellmeier_Bs = np.array([]), \
+             sellmeier_Cs = np.array([])):
         #__position is the centre of the sphere. Position should be a
         #numpy 3x1 array, radius any positive floating point number 
         #(no complex radii cmon).
         SceneObject.__init__(self, colour, reflectivity, transmitivity,\
-            refractive_index)
+            refractive_index, sellmeier_Bs, sellmeier_Cs)
         self.__position = position
         self.__radius = radius
         self.__type = 'sphere'
@@ -62,7 +71,6 @@ class Sphere(SceneObject):
 
     #calculating t for intersection of ray with sphere
     def intersect(self, ray):
-        # a is equal to one
         position = np.array(self.get_position())
         radius = self.get_radius()
         ray_position = np.array(ray.get_position_vector())
@@ -85,12 +93,14 @@ class Sphere(SceneObject):
 class Plane(SceneObject):
 
     def __init__(self, normal, plane_position, colour, reflectivity = 1, \
-        transmitivity = 0, refractive_index = 1, limits = [np.inf,np.inf]):
+        transmitivity = 0, refractive_index = 1, limits = [-np.inf, np.inf, \
+         -np.inf, np.inf, -np.inf, np.inf], sellmeier_Bs = np.array([]), \
+             sellmeier_Cs = np.array([])):
         #r.n = r.a form, where a is some arbitrary position on the plane.
         #Normal and position are 3x1 arrays. Limits formatting:
         #[x_min, x_max, y_min, y_max, z_min, z_max].
         SceneObject.__init__(self, colour, reflectivity, transmitivity, \
-            refractive_index)
+            refractive_index, sellmeier_Bs, sellmeier_Cs)
 
         #Numpy is nice enough to automatically change types when calling 
         #in-built functions like this - was causing me trouble last time,
@@ -101,20 +111,20 @@ class Plane(SceneObject):
         self.__limits = limits
         self.__type = 'plane'
 
-    def get_normal(self, position = np.array([0, 0, -1000])):
-        #The default is very unlikely to lay on a plane. It's possible,
-        # but we should be fine.
-        orientation_vector = self.get_plane_position() - position
-        orientation_vector = orientation_vector/np.linalg.norm(\
-            orientation_vector)
-        # print(self.__normal, orientation_vector)
-        # print(np.sign(np.dot(orientation_vector, self.__normal)))
-        #(np.dot(orientation_vector, self.__normal), np.sign(np.dot(orientation_vector, self.__normal)))
-        return int(np.sign(np.dot(orientation_vector, self.__normal)))\
-             * self.__normal
+    # def get_normal(self, position = np.array([0, 0, -1000])):
+    #     #The default is very unlikely to lay on a plane. It's possible,
+    #     # but we should be fine.
+    #     orientation_vector = self.get_plane_position() - position
+    #     orientation_vector = orientation_vector/np.linalg.norm(\
+    #         orientation_vector)
+    #     # print(self.__normal, orientation_vector)
+    #     # print(np.sign(np.dot(orientation_vector, self.__normal)))
+    #     #(np.dot(orientation_vector, self.__normal), np.sign(np.dot(orientation_vector, self.__normal)))
+    #     return int(np.sign(np.dot(orientation_vector, self.__normal)))\
+    #          * self.__normal
 
-    # def get_normal(self, position = None):
-    #     return self.__normal
+    def get_normal(self, position = None):
+        return self.__normal
 
     def get_plane_position(self):
         return self.__plane_position
@@ -136,31 +146,43 @@ class Plane(SceneObject):
         t = np.dot(plane_position-ray_position,plane_norm)/delta
         if t < 0:
             return np.inf
-        if self.get_limits() != [np.inf,np.inf]:
-            point = ray_position + t + ray_dir
-            if self.limits(point,self.get_limits()) == False:
-                return np.inf
         return t
-    
-    def limits(self, point,lengths):
-        position = self.get_plane_position()
-        if np.abs(point[0] - position[0]) > lengths[1]/2:
-            return False
-        direction = np.cross([1,0,0],self.get_normal())
-        length = (point[1] - position[1])/direction[1]
-        if np.abs(length) > lengths[0]/2:
-            return False
-        return True
+
+class Circle(Plane):
+
+    def __init__(self, normal, centre, colour, reflectivity = 1, \
+        transmitivity = 0, refractive_index = 1, radius = 1, sellmeier_Bs\
+        = np.array([]), sellmeier_Cs = np.array([])):
+        
+        Plane.__init__(self, normal, centre, colour, reflectivity, \
+        transmitivity, refractive_index, sellmeier_Bs= sellmeier_Bs, \
+        sellmeier_Cs = sellmeier_Cs)
+        self.__radius = radius
+
+    def get_radius(self):
+        return self.__radius
+
+    def intersect(self, ray):
+        t = Plane.intersect(self, ray)
+        if t != np.inf:
+            intersection = ray.get_position(t)
+            distance = np.sqrt(np.sum((self.get_plane_position() - \
+                intersection)**2))
+            if distance > self.get_radius():
+                return np.inf
+            return t
+        return np.inf
 
 class Lens(SceneObject):
 
-    def __init__(self, plane_position, plane_normal, sphere_position, sphere_radius,colour=[0,0,0], reflectivity = 0, \
-        transmitivity = 1, refractive_index = 1.52):
+    def __init__(self, plane_position, plane_normal, sphere_position,sphere_radius, sellmeier_Bs, sellmeier_Cs, colour=[0,0,0], reflectivity = 0, \
+        transmitivity = 1, refractive_index = 1.5):
         SceneObject.__init__(self, colour, reflectivity, transmitivity,\
             refractive_index)
-        self.__plane = Plane(plane_position,plane_normal, colour,reflectivity = 0 )
-        self.__sphere = Sphere(sphere_position,sphere_radius, colour,reflectivity = 0)
+        self.__plane = Plane(plane_position,plane_normal, colour,  reflectivity = 0 ,sellmeier_Bs = sellmeier_Bs, sellmeier_Cs =sellmeier_Cs )
+        self.__sphere = Sphere(sphere_position,sphere_radius, colour,reflectivity = 0, sellmeier_Bs=sellmeier_Bs, sellmeier_Cs= sellmeier_Cs)
         self.__type = 'lens'
+        
 
     def get_plane(self):
         return self.__plane
@@ -174,6 +196,7 @@ class Lens(SceneObject):
     def get_normal(self,position):
         return self.__normal
     
+    
     def intersect(self,ray):
         plane = self.get_plane()
         sphere = self.get_sphere()
@@ -184,9 +207,12 @@ class Lens(SceneObject):
         distance_1= plane.intersect(ray_center_1)
         distance_2= plane.intersect(ray_center_2)
         distance = min(distance_1,distance_2)
-        lens_center = sphere.get_position() + distance * plane.get_normal()
+        if distance == distance_1:
+            lens_center = sphere.get_position() + distance * plane.get_normal()
+        if distance == distance_2:
+            lens_center = sphere.get_position() + distance * -1*plane.get_normal()
         plane_int = plane.intersect(ray)
-        rand_vector = plane.get_normal() + [1,0,0]
+        rand_vector = plane.get_normal() + [33,2,5]
         plane_vector = np.cross(plane.get_normal(),rand_vector)
         ray_plane = Ray(lens_center,plane_vector)
         lens_radius = sphere.intersect(ray_plane)
