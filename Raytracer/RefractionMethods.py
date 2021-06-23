@@ -1,6 +1,6 @@
 import numpy as np
 # import SellmeierCoefficients as sc
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 def rgb_decorator(function):
     #Wavelengths will be sampled exactly the same way for each secondary
@@ -48,7 +48,7 @@ def sellmeier_n(wavelength, Bs, Cs):
     terms = tops/bots
     return np.sqrt(1 + sum(terms))
 
-@rgb_decorator
+#@rgb_decorator
 def wavelength_rgb(wavelength, gamma = 0.8):
     #Takes a wavelength in μm and returns an rgb value for it.
     #Based off an approximation. Real rgb considerations wee bit 
@@ -175,7 +175,7 @@ if __name__ == '__main__':
     # plt.imshow(colours)
     # plt.show()
 
-    #print(wavelength_rgb(None))
+    # print(wavelength_rgb(None))
     # samples = np.linspace(0.38, 0.75, 102)[1:-1]
     # correlation_list = []
     # for i in range(len(samples)):
@@ -185,8 +185,18 @@ if __name__ == '__main__':
     # plt.plot(samples, correlation_samples)
     # plt.show()
 
-    
-
     # n = sellmeier_n(0.565, sc.flint_glass_Bs, sc.flint_glass_Cs)
     # print(n)
     
+    # samples = np.array([0.40176471, 0.42352941, 0.44529412, 0.46705882, \
+    #             0.48882353, 0.51058824,0.53235294, 0.55411765, 0.57588235,\
+    #             0.59764706, 0.61941176, 0.64117647, 0.66294118, 0.68470588,\
+    #             0.70647059, 0.72823529])
+    # rgbs = np.zeros((len(samples), len(samples), 3))
+    # for i in range(len(samples)):
+    #     rgbs[i] = wavelength_rgb(samples[i])
+    # #print(rgbs)
+    # #colours = np.array(rgbs)
+    
+    # plt.imshow(rgbs)
+    # plt.show()

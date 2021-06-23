@@ -1,5 +1,6 @@
 import numpy as np
 import RefractionMethods as rm
+#from ObjectClasses import Circle
 #import networkx as nx
 
 # d = 0
@@ -34,7 +35,7 @@ class Ray():
         #Line equation: r = p + dt. Given a value of t, returns a
         #position on the ray's trajectory.
         return self.get_position_vector() + t * self.get_direction_vector()
-    
+
     #Needed it for a bit, then changed code again.
     def set_wavelength(self, wavelength): 
         self.__wavelength = wavelength
@@ -104,6 +105,7 @@ class Ray():
         return Ray(intersection + Ray.epsilon * direction, direction, wavelength)
         
 if __name__ == '__main__':
+    pass
 
 #     #Ray can be used for identifying nodesssss, although not how 
 #     #implemented in the end.
@@ -111,8 +113,23 @@ if __name__ == '__main__':
 #     graph = nx.Graph()
 #     graph.add_node(ray)
 
-    rays = []
-    wavelengths = np.linspace(0.38, 0.75, 10)[1:-1]
-    for i in range(len(wavelengths)):
-        rays.append(Ray(np.array([1,1,1]), np.array([1,1,1]), wavelength=wavelengths[i]))
-    print(rays)
+    # rays = []
+    #wavelengths = np.linspace(0.38, 0.75, 10)[1:-1]
+    # for i in range(len(wavelengths)):
+    #     rays.append(Ray(np.array([1,1,1]), np.array([1,1,1]), wavelength=wavelengths[i]))
+    # print(rays)
+
+    # rays = np.array([Ray(np.array([0,0,-1]), np.array([0,0,1])), \
+    #                 Ray(np.array([0,-0.5,-0.5]), np.array([0,0.5,0.5])), \
+    #                 Ray(np.array([-0.5,0,-0.5]), np.array([0.5,0,0.5]))])
+
+    # object = Circle(np.array([0,0,1]), np.array([0,0,0]), np.array([0,0,0]),\
+    #                 radius=1, sellmeier_Bs=np.array([0.75831, 0.08495]), \
+    #                 sellmeier_Cs= np.array([0.01007, 8.91377]))
+
+    # print(object.intersect(rays))
+    # ray = Ray(np.array([0,0,-1]), np.array([0,0,1]))
+    # distance = object.intersect(ray)
+    # a = ray.wavelength_refraction(object, distance, wavelengths)
+    # print(a)
+    #sadly doesn't work, would have sped up code.

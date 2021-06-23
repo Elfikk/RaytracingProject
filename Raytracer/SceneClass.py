@@ -225,8 +225,8 @@ class Scene():
                 #print(self.get_screen())
                 #print(i,j)
                 screen_pos += inv_width * horizontal_line
-                #ray = rc.Ray(camera, screen_pos - camera)
-                ray = rc.Ray(screen_pos, np.array([0,0,1])) #Paraxial rays.
+                ray = rc.Ray(camera, screen_pos - camera)
+                #ray = rc.Ray(screen_pos, np.array([0,0,1])) #Paraxial rays.
                 self.update_screen(j,i, self.pixel_colour(ray, max_depth))
         
         return self.get_screen()
@@ -253,6 +253,7 @@ class Dispersion_Scene(Scene):
     def render(self, width = 400, height = 300, max_depth = 3,\
         dispersion_samples = 8):
         self.set_samples(dispersion_samples)
+        print(self.get_samples())
         image = Scene.render(self, width, height, max_depth)
 
         return image
@@ -350,7 +351,7 @@ class Dispersion_Scene(Scene):
         #for i in range(len(edges)):
 
         wavelengths = {}
-        number_of_samples = len(self.get_samples())
+        #number_of_samples = len(self.get_samples())
         for wavelength in self.get_samples():
             wavelengths[wavelength] = 0
 
@@ -373,14 +374,180 @@ class Dispersion_Scene(Scene):
 
         final_wavelengths = nv[0]['wavelengths'] # oh boi
         intensity_total = sum(final_wavelengths.values())
+        #print(final_wavelengths)
         final_colour = np.array([0.,0.,0.])
         for wavelength in final_wavelengths:
             # print(wavelength)
             # print(final_wavelengths[wavelength])
             final_colour += final_wavelengths[wavelength] * \
-                rm.wavelength_rgb(wavelength) / intensity_total
+                rm.wavelength_rgb(wavelength)
         self.get_tree().clear()
         return final_colour        
+
+class Rainbow_Tracer():
+#Uses raytracing idea, but doesn't explicitely use our raytracer as it 
+#needs some heavy editing - so I'd rather just write it without inheritance
+#causing possible trouble.
+
+#It's still a raytraced rainbow (hopefully as of writing), just doesn't use
+#the exact same method as the previous scenes.
+
+    def __init__(self, camera_position, screen_positions, background = \
+        np.array([0.4, 0.6, 0.8])):
+
+        #These guys are used just as they were earlier
+        self.__camera_position = camera_position
+        self.__screen_positions = screen_positions
+        self.__background = background 
+
+        #Raindrop modelled as a sphere of radius of 1mm (real raindrops are
+        #not spherical, but look like hamburger buns or parachutes).
+        self.__raindrop = Sphere(np.array([0,0,0]), 1e-3, np.array([1,1,1]),\
+            reflectivity= 0, transmitivity = 1, sellmeier_Bs= sc.water_Bs, \
+            sellmeier_Cs= sc.water_Cs) 
+
+        #Currently assumes scene in the positive z direction.
+        sun_angle = np.deg2rad(30)
+        self.__light_normal = np.array([0, np.sin(sun_angle), -np.cos(sun_angle)])
+
+        self.__wavelengths = np.array([0.565])
+
+    def get_wavelengths(self):
+        return self.__wavelengths
+
+    def render(self, width = 600, height = 300, samples = 8, rolls = 10):
+
+        image = np.zeros((height, width, 3))
+
+        self.__wavelengths = np.linspace(0.38, 0.75, samples + 2)[1:-1]
+
+        tl, tr, bl = self.__screen_positions 
+        camera = self.__camera_position
+
+        horizontal_line = tr - tl
+        vertical_line = bl - tl
+
+        inv_height = 1/height #Inverse Height
+        inv_width = 1/width #Inverse Width
+
+        for j in range(height):
+            screen_pos = tl + (j + 0.5)* inv_height * vertical_line \
+                + 0.5 * inv_width * horizontal_line
+            print(j) #A poor man's progress bar.
+            for i in range(width):
+                #print(j,i)
+                #print(self.get_screen())
+                #print(i,j)
+                screen_pos += inv_width * horizontal_line
+                ray = rc.Ray(screen_pos, screen_pos - camera)
+                #ray = rc.Ray(screen_pos, np.array([0,0,1])) #Paraxial rays.
+                image[j, i] = self.pixel_colour(ray, rolls)
+        
+        return image
+
+    def pixel_colour(self, ray, rolls):
+        #Order of magnitude estimate gives bout 0.06m of seperation between raindrops.
+        #So I use 0.1 because I'm a big fan of nicer numbers.
+
+        # distances = np.arange(5, 20+layer_distance, layer_distance)/ray.get_direction_vector()[2]
+        # intersections = ray_distances(ray, distances, layer_distance)
+        # if len(intersections) > 1:
+        #     return self.raindrop_effect(ray, distances[intersections[0]], layer_distance)
+        # return self.__background
+
+        count = 0
+        centre = ray.get_position(.1) 
+        dot_averages = np.zeros(len(self.__wavelengths))
+
+        while count < rolls:
+            #I "spawn" the raindrop 1 metre away on the ray path. Arbitrary 
+            #choice as we only care about angles. However, picking a smaller
+            #distance like a metre 
+            distance1 = np.inf #random distance from the 'centre'.
+            dots = np.array([])
+            while distance1 == np.inf:
+                #I want samples from -2 mm to 2mm on each axis, with the 
+                #distance constraint - as we do want our ray to intersect with
+                #the raindrop after all!
+                pos_change = -2e-3 + 4e-3 * np.array([np.random.random(), np.random.random(), np.random.random()])
+                self.__raindrop.set_centre(centre + pos_change)
+                distance1 = self.__raindrop.intersect(ray) 
+            for wavelength in self.__wavelengths:
+                dots = np.append(dots, self.raindrop_bouncing(ray, distance1, wavelength))
+            dot_averages += dots/rolls
+            count += 1
+
+        print(dot_averages)
+
+        index = np.where(np.logical_and(dot_averages > 0., dot_averages == max(dot_averages)))
+        try:
+            return rm.wavelength_rgb(self.__wavelengths[index[0][0]])
+        except:
+            return self.__background
+
+    # def raindrop_centre(self, centre):
+        
+
+    def raindrop_effect(self, ray, distance, layer_distance):
+        
+        global a
+        a += 1
+
+        sphere_centre = ray.get_position(distance) - ray.get_position(distance)%layer_distance \
+            + np.array([layer_distance/2, layer_distance/2, layer_distance/2])
+        self.raindrop_centre(sphere_centre)
+        wavelengths = self.get_wavelengths()
+        
+        #The colour of the pixel is determined by maximising the dot product
+        #of the ray against the Sun plane. The wavelength which has maximum 
+        #dot product has the smallest angle to the incoming rays of the Sun,
+        #so will be most intense.
+        dot_products = np.array([])
+
+        #Distance along ray line for the first intersection.
+        distance1 = self.__raindrop.intersect(ray) 
+
+        for wavelength in wavelengths:
+            dot = self.raindrop_bouncing(ray, distance1, wavelength)
+            dot_products = np.append(dot_products, dot)
+
+        max_dot_index = np.where(np.logical_and(dot_products > 0.85, \
+            dot_products == np.amax(dot_products)))
+
+        if len(max_dot_index) != 0:
+            return rm.wavelength_rgb(wavelengths[max_dot_index[0]])
+        return self.__background
+
+    def raindrop_bouncing(self, ray, distance1, wavelength):
+        refracted_ray = ray.wavelength_refraction(self.__raindrop,\
+                distance1, wavelength)
+        #Distance travelled inside the raindrop to hit it a second time.
+        distance2 = self.__raindrop.intersect(refracted_ray) 
+        if distance2 != np.inf:
+            #Is expected to be a tir ray, but could be refracted if not
+            #beyond critical angle.
+            tir_ray = refracted_ray.wavelength_refraction(self.__raindrop,\
+            distance2, wavelength)
+            distance3 = self.__raindrop.intersect(tir_ray)
+            if distance3 != np.inf:
+                final_ray = tir_ray.wavelength_refraction(self.__raindrop,\
+                distance3, wavelength)
+                return np.dot(final_ray.get_direction_vector(), \
+                    self.__light_normal)
+            return -1
+        return -1
+
+def ray_distances(ray, t, layer_distance = 0.1):
+    #Works on an array of ts, giving much faster calculation.
+
+    #Distances along the ray needed to pass at every 0.1 increment along z.
+
+    x = (ray.get_position_vector()[0] + t * ray.get_direction_vector()[0])%layer_distance
+    y = (ray.get_position_vector()[1] + t * ray.get_direction_vector()[1])%layer_distance
+    
+    #Distance between ray in 2d plane and 
+    distance_squared = (x - layer_distance/2)**2  + (y - layer_distance/2)**2
+    return np.where(distance_squared < 4e-6)
 
 if __name__ == '__main__':
     
@@ -421,17 +588,20 @@ if __name__ == '__main__':
     #     Sphere(np.array([-200, -75, 600]), 100, np.array([0.5,0.5,0.8]), 0.5, transmitivity=0, refractive_index=1.5)]
     # #     #    Plane(np.array([0,1,-0.01]), np.array([0,-200,0]), np.array([0.7,0.2,0.2]), 0.9)]
 
-    objects = [Sphere(np.array([200, 150, 3000]), 400, np.array([0.,0.,0.]), 0.),\
-        Sphere(np.array([0, 0, 300]), 150, np.array([0.,0.,0.]), 0., transmitivity=1,\
-             sellmeier_Bs=sc.flint_glass_Bs, sellmeier_Cs=sc.flint_glass_Cs, refractive_index=1.6)]#, \
+    objects = [Sphere(np.array([200, 150, 3000]), 400, np.array([1.,1.,1.]), 0.),\
+        # Sphere(np.array([0, 0, 300]), 150, np.array([0.,0.,0.]), 0., transmitivity=1,\
+        #      sellmeier_Bs=sc.flint_glass_Bs, sellmeier_Cs=sc.flint_glass_Cs, refractive_index=1.6)]#, \
+        Plane(np.array([0,0,1]), np.array([0,0,300]), np.array([0.,0.,0.]), 0, transmitivity=1, \
+            sellmeier_Bs=sc.flint_glass_Bs, sellmeier_Cs=sc.flint_glass_Cs)]
+    
     #     # Sphere(np.array([-200, -75, 600]), 100, np.array([0.5,0.5,0.8]), 0.5, transmitivity=0, \
         #     refractive_index=1.5)]
 
     # objects = [Circle(np.array([1,0,-0.1]), np.array([150,0,0]), np.array([0.1, 0.5, 0.8]), radius=50)]
 
     #New method of specifying the viewport.
-    # viewport_corners = (np.array((-200, 150, 0)), np.array((200, 150, 0)),\
-    #      np.array((-200,-150,0)))
+    viewport_corners = (np.array((-200, 150, 0)), np.array((200, 150, 0)),\
+         np.array((-200,-150,0)))
 
     # viewport_corners = (np.array((-55, 20, 0)), np.array((-40, 20, 0)),\
     #      np.array((-55,-30,0)))
@@ -442,17 +612,29 @@ if __name__ == '__main__':
     # viewport_corners = (np.array((-1, 1, 0)), np.array((1, 1, 0)),\
     #      np.array((-1,-1,0)))
 
-    viewport_corners = (np.array((-46, -7.5, 0)), np.array((-44, -7.5, 0)),\
-          np.array((-46,-12.5,0)))
+    # viewport_corners = (np.array((-46, -7.5, 0)), np.array((-44, -7.5, 0)),\
+    #       np.array((-46,-12.5,0)))
 
-    # #Good practice is writing stuff earlier.
-    camera_position = np.array((0,0,-250))
-    # camera_position = np.array([200,200,-500])
-    light_pos = np.array((0,0,0)) #meaningless for now
-    background_colour = np.array([0, 0, 0])
+    # viewport_corners = (np.array((13.5, -7.5, 0)), np.array((16.5, -7.5, 0)),\
+    #      np.array((13.5,-15,0)))
 
-    scene = Dispersion_Scene(objects, camera_position, viewport_corners, light_pos,\
-         background_colour)
+    # viewport_corners = (np.array((10, 30, 0)), np.array((30, 30, 0)),\
+    #       np.array((10,10,0)))
+
+    # viewport_corners = (np.array((10, 28.15, 0)), np.array((11.5, 28.15, 0)),\
+    #       np.array((10,27.5,0)))
+
+    # # #Good practice is writing stuff earlier.
+    # camera_position = np.array((0,0,-250))
+    # # camera_position = np.array([200,200,-500])
+    # light_pos = np.array((0,0,0)) #meaningless for now
+    # background_colour = np.array([0, 0, 0])
+
+    # scene = Dispersion_Scene(objects, camera_position, viewport_corners, light_pos,\
+    #      background_colour)
+
+    # scene = Scene(objects, camera_position, viewport_corners, light_pos,\
+    #       background_colour)
 
     #Using default settings.
     #image = scene.render(800, 600, 3)
@@ -465,10 +647,31 @@ if __name__ == '__main__':
     #image = scene.render(1600, 1200, 5)
     #image = scene.render(200, 500, 2)
     #image = scene.render(50, 50, 2)
-    image = scene.render(20, 50, 2, 16)
-    normalisation = np.amax(image)
-    image = image / normalisation #to fix stupid clipping and intensity :)
+    #image = scene.render(20, 100, 3, 16)
+    #image = scene.render(30, 75, max_depth=2, dispersion_samples= 6)
+    #image = scene.render(100, 100, max_depth=2, dispersion_samples=16)
+
+    #image = scene.render(900, 390, 2, 16)
+
+    # image = scene.render(8, 20, 2)
+    # normalisation = np.amax(image)
+    # image = image / normalisation #to fix stupid clipping and intensity :)
 
     #print(a,b,c, rc.d, rc.e, rc.f) #Data gathering.
+
+    #Rainbow
+
+    camera_position = np.array([0,0,-5])
+
+    human_angle = np.deg2rad(60)
+
+    viewport_corners = (np.array([-5 * np.tan(human_angle), 5 * np.tan(human_angle), 0]),\
+                        np.array([5 * np.tan(human_angle),5 * np.tan(human_angle),0]),\
+                        np.array([-5 * np.tan(human_angle), 0, 0]))
+
+    scene = Rainbow_Tracer(camera_position, viewport_corners)
+
+    image = scene.render(50, 25, 8, 20)
+
     plt.imshow(image)
     plt.show()

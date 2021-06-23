@@ -60,6 +60,10 @@ class Sphere(SceneObject):
 
     def get_type(self):
         return self.__type
+
+    #Needed for raindrop.
+    def set_centre(self, new_pos):
+        self.__position = new_pos
         
     def get_normal(self, position):
         #Returns the normalised vector between the centre of the sphere
